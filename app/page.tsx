@@ -133,7 +133,6 @@ export default function Home() {
       </header>
 
       <section className="hero" id="top">
-        <div className="energy-visual" aria-hidden="true"><span /><span /><span /></div>
         <div className="eyebrow">GS E&R · PUBLIC AFFAIRS</div>
         <h1>GS E&R<br /><em>대외협력 모니터링</em></h1>
         <div className="hero-bottom">
