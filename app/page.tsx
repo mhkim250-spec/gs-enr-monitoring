@@ -14,6 +14,8 @@ type AssemblyEvent = {
   keywords: string[];
 };
 
+type KorchamEvent = { id: string; title: string; date: string; detailUrl: string };
+
 const KEYWORDS = [
   "탄소", "에너지", "NDC", "배출권", "PPA", "분산에너지", "수소", "특구", "원전",
   "석탄", "전력", "LNG", "전기", "전기요금", "SMP", "REC", "열병합", "송전", "배전",
@@ -38,6 +40,9 @@ export default function Home() {
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [visible, setVisible] = useState(6);
+  const [korchamEvents, setKorchamEvents] = useState<KorchamEvent[]>([]);
+  const [korchamLoading, setKorchamLoading] = useState(true);
+  const [korchamError, setKorchamError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -51,6 +56,16 @@ export default function Home() {
         if (reason.name !== "AbortError") setError(reason.message);
       })
       .finally(() => setLoading(false));
+    fetch("/api/korcham", { signal: controller.signal })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "대한상의 행사 정보를 불러오지 못했습니다.");
+        setKorchamEvents(data.events || []);
+      })
+      .catch((reason) => {
+        if (reason.name !== "AbortError") setKorchamError(reason.message);
+      })
+      .finally(() => setKorchamLoading(false));
     return () => controller.abort();
   }, []);
 
@@ -73,7 +88,7 @@ export default function Home() {
         </a>
         <nav aria-label="주요 메뉴">
           <a className="active" href="#assembly">국회</a>
-          <span className="coming">다음 소스 준비 중</span>
+          <a href="#korcham">대한상의</a>
         </nav>
         <div className="live"><i /> 매일 업데이트</div>
       </header>
@@ -82,7 +97,7 @@ export default function Home() {
         <div className="eyebrow">GS E&R · PUBLIC AFFAIRS</div>
         <h1>GS E&R<br /><em>대외협력 모니터링</em></h1>
         <div className="hero-bottom">
-          <p>에너지·기후·산업 의제와 연결된<br />최신 국회 행사를 한곳에서 확인하세요.</p>
+          <p>에너지·기후·산업 의제와 연결된 국회 행사와<br />대한상의의 접수중 행사를 한곳에서 확인하세요.</p>
           <a href="#assembly" className="discover">행사 살펴보기 <span>↓</span></a>
         </div>
       </section>
@@ -166,10 +181,38 @@ export default function Home() {
         )}
       </section>
 
+      <section className="events-section kcci-section" id="korcham">
+        <div className="section-head">
+          <div>
+            <p className="section-number">02 / SOURCE</p>
+            <h2>대한상의</h2>
+          </div>
+          <div className="section-tools">
+            <span className="open-badge">● 접수중</span>
+            <p>총 <strong>{korchamEvents.length}</strong>개의 행사</p>
+          </div>
+        </div>
+
+        {korchamLoading && <div className="status-card" role="status"><span className="loader" /><p>접수중인 대한상의 행사를 확인하고 있습니다.</p></div>}
+        {!korchamLoading && korchamError && <div className="status-card error" role="alert"><span>!</span><div><h3>대한상의 데이터를 불러오지 못했습니다</h3><p>{korchamError}</p></div></div>}
+        {!korchamLoading && !korchamError && korchamEvents.length === 0 && <div className="status-card empty"><span>0</span><p>현재 접수중인 행사가 없습니다.</p></div>}
+
+        <div className="kcci-grid">
+          {korchamEvents.map((event, index) => (
+            <a className="kcci-card" href={event.detailUrl} target="_blank" rel="noreferrer" key={event.id}>
+              <div className="kcci-card-top"><span>접수중</span><b>{String(index + 1).padStart(2, "0")}</b></div>
+              <h3>{event.title}</h3>
+              <div className="kcci-date"><span>행사일자</span><strong>{event.date}</strong></div>
+              <div className="kcci-link">행사 페이지로 이동 <span>↗</span></div>
+            </a>
+          ))}
+        </div>
+      </section>
+
       <footer>
         <a className="brand footer-logo" href="#top"><img src="/gs-enr-logo.png" alt="GS E&R" /></a>
         <p>정책과 비즈니스가 만나는 순간을<br />가장 먼저 발견하세요.</p>
-        <div><span>DATA SOURCE</span><a href="https://open.assembly.go.kr" target="_blank" rel="noreferrer">열린국회정보 ↗</a></div>
+        <div><span>DATA SOURCES</span><a href="https://open.assembly.go.kr" target="_blank" rel="noreferrer">열린국회정보 ↗</a><a href="https://www.korcham.net/nCham/Service/Event/appl/KcciNewsList.asp" target="_blank" rel="noreferrer">대한상공회의소 ↗</a></div>
         <small>© 2026 AGENDA NOW</small>
       </footer>
     </main>
