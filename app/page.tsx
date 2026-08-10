@@ -17,12 +17,25 @@ type AssemblyEvent = {
 type KorchamEvent = { id: string; title: string; date: string; detailUrl: string };
 type ClimateSourceEvent = { id:string; title:string; date:string; location:string; host:string; posterUrl:string; detailUrl:string };
 
+function isCurrentOrFuture(dateText: string) {
+  const matches = [...dateText.matchAll(/(?:^|\D)(20\d{2}|\d{2})\s*(?:년|[.\/-])\s*(\d{1,2})\s*(?:월|[.\/-])\s*(\d{1,2})/g)];
+  if (!matches.length) return true;
+  const last = matches[matches.length - 1];
+  const year = Number(last[1]) < 100 ? 2000 + Number(last[1]) : Number(last[1]);
+  const endDate = new Date(year, Number(last[2]) - 1, Number(last[3]), 23, 59, 59);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return endDate >= today;
+}
+
 function ClimateSourceSection({ id, number, title, events, loading, error }: { id:string; number:string; title:string; events:ClimateSourceEvent[]; loading:boolean; error:string }) {
+  const currentEvents = events.filter((event) => isCurrentOrFuture(event.date));
   return <section className="events-section climate-section" id={id}>
-    <div className="section-head"><div><p className="section-number">{number} / SOURCE</p><h2>{title}</h2></div><div className="section-tools"><p>최신 <strong>{events.length}</strong>개 행사</p></div></div>
+    <div className="section-head"><div><p className="section-number">{number} / SOURCE</p><h2>{title}</h2></div><div className="section-tools"><p>예정 <strong>{currentEvents.length}</strong>개 행사</p></div></div>
     {loading && <div className="status-card" role="status"><span className="loader" /><p>최신 행사를 확인하고 있습니다.</p></div>}
     {!loading && error && <div className="status-card error" role="alert"><span>!</span><div><h3>데이터를 불러오지 못했습니다</h3><p>{error}</p></div></div>}
-    <div className="event-grid climate-grid">{events.map((event, index) => <article className="event-card" key={event.id}>
+    {!loading && !error && currentEvents.length === 0 && <div className="status-card empty"><span>0</span><p>현재 예정된 행사가 없습니다.</p></div>}
+    <div className="event-grid climate-grid">{currentEvents.map((event, index) => <article className="event-card" key={event.id}>
       <div className="poster-wrap">{event.posterUrl ? <img src={event.posterUrl} alt={`${event.title} 포스터`} loading="lazy" /> : <div className="poster-fallback"><b>CLIMATE</b><span>POLICY<br />EVENT</span></div>}<span className="card-index">{String(index+1).padStart(2,"0")}</span></div>
       <div className="card-body"><div className="tags"><span>#기후</span><span>#에너지</span></div><h3>{event.title}</h3><dl><div><dt>일시</dt><dd>{event.date}</dd></div><div><dt>장소</dt><dd>{event.location}</dd></div><div><dt>주최</dt><dd>{event.host}</dd></div></dl><div className="card-links"><a href={event.detailUrl} target="_blank" rel="noreferrer">행사 자세히 보기 <span>↗</span></a>{event.posterUrl && <a className="poster-link" href={event.posterUrl} target="_blank" rel="noreferrer">포스터 원본</a>}</div></div>
     </article>)}</div>
@@ -92,14 +105,17 @@ export default function Home() {
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("ko");
-    if (!needle) return events;
-    return events.filter((event) =>
+    const currentEvents = events.filter((event) => isCurrentOrFuture(event.date));
+    if (!needle) return currentEvents;
+    return currentEvents.filter((event) =>
       [event.title, event.host, event.location, ...event.keywords]
         .join(" ")
         .toLocaleLowerCase("ko")
         .includes(needle),
     );
   }, [events, query]);
+
+  const currentKorchamEvents = useMemo(() => korchamEvents.filter((event) => isCurrentOrFuture(event.date)), [korchamEvents]);
 
   return (
     <main>
@@ -213,16 +229,16 @@ export default function Home() {
           </div>
           <div className="section-tools">
             <span className="open-badge">● 접수중</span>
-            <p>총 <strong>{korchamEvents.length}</strong>개의 행사</p>
+            <p>예정 <strong>{currentKorchamEvents.length}</strong>개의 행사</p>
           </div>
         </div>
 
         {korchamLoading && <div className="status-card" role="status"><span className="loader" /><p>접수중인 대한상의 행사를 확인하고 있습니다.</p></div>}
         {!korchamLoading && korchamError && <div className="status-card error" role="alert"><span>!</span><div><h3>대한상의 데이터를 불러오지 못했습니다</h3><p>{korchamError}</p></div></div>}
-        {!korchamLoading && !korchamError && korchamEvents.length === 0 && <div className="status-card empty"><span>0</span><p>현재 접수중인 행사가 없습니다.</p></div>}
+        {!korchamLoading && !korchamError && currentKorchamEvents.length === 0 && <div className="status-card empty"><span>0</span><p>현재 접수중인 예정 행사가 없습니다.</p></div>}
 
         <div className="kcci-grid">
-          {korchamEvents.map((event, index) => (
+          {currentKorchamEvents.map((event, index) => (
             <a className="kcci-card" href={event.detailUrl} target="_blank" rel="noreferrer" key={event.id}>
               <div className="kcci-card-top"><span>접수중</span><b>{String(index + 1).padStart(2, "0")}</b></div>
               <h3>{event.title}</h3>
