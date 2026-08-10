@@ -34,15 +34,30 @@ const dateKey = (value: string) => {
 export async function GET() {
   const key = process.env.ASSEMBLY_API_KEY;
   if (!key) return NextResponse.json({ error: "국회 API 키가 설정되지 않았습니다." }, { status: 503 });
-  const url = new URL("https://open.assembly.go.kr/portal/openapi/nfcoioopazrwmjrgs");
-  url.searchParams.set("KEY", key);
-  url.searchParams.set("Type", "json");
-  url.searchParams.set("pIndex", "1");
-  url.searchParams.set("pSize", "100");
   try {
-    const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
-    if (!response.ok) throw new Error(`국회 API가 ${response.status} 상태를 반환했습니다.`);
-    const rows = extractRows(await response.json());
+    const base = "https://open.assembly.go.kr/portal/openapi/nfcoioopazrwmjrgs";
+    const cleanKey = key.trim();
+    const standard = new URL(base);
+    standard.searchParams.set("KEY", cleanKey);
+    standard.searchParams.set("Type", "json");
+    standard.searchParams.set("pIndex", "1");
+    standard.searchParams.set("pSize", "100");
+    const candidates = [
+      standard.toString(),
+      `${base}?KEY=${encodeURIComponent(cleanKey)}%26Type=json%26pIndex=1%26pSize=100`,
+    ];
+    let payload: unknown = null;
+    let lastStatus = 502;
+    for (const candidate of candidates) {
+      const response = await fetch(candidate, {
+        headers: { Accept: "application/json, text/plain, */*", "User-Agent": "AgendaNow/1.0" },
+        cache: "no-store",
+      });
+      lastStatus = response.status;
+      if (response.ok) { payload = await response.json(); break; }
+    }
+    if (!payload) throw new Error(`국회 API가 ${lastStatus} 상태를 반환했습니다.`);
+    const rows = extractRows(payload);
     const events = rows.map((row, index) => {
       const title = text(row, "TITLE");
       const keywords = KEYWORDS.filter((keyword) => title.toLocaleLowerCase("ko").includes(keyword.toLocaleLowerCase("ko")));
