@@ -68,7 +68,9 @@ export default function Home() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="어젠다 홈">AGENDA<span>·</span>NOW</a>
+        <a className="brand logo-brand" href="#top" aria-label="GS E&R 대외협력 모니터링 홈">
+          <img src="/gs-enr-logo.png" alt="GS E&R" />
+        </a>
         <nav aria-label="주요 메뉴">
           <a className="active" href="#assembly">국회</a>
           <span className="coming">다음 소스 준비 중</span>
@@ -77,10 +79,10 @@ export default function Home() {
       </header>
 
       <section className="hero" id="top">
-        <div className="eyebrow">PUBLIC AFFAIRS · EVENT INTELLIGENCE</div>
-        <h1>놓치지 말아야 할<br /><em>정책의 순간들.</em></h1>
+        <div className="eyebrow">GS E&R · PUBLIC AFFAIRS</div>
+        <h1>GS E&R<br /><em>대외협력 모니터링</em></h1>
         <div className="hero-bottom">
-          <p>국회에 흩어진 행사 중 에너지·기후·산업 의제와<br />연결된 일정만 선별해 한곳에 모았습니다.</p>
+          <p>에너지·기후·산업 의제와 연결된<br />최신 국회 행사를 한곳에서 확인하세요.</p>
           <a href="#assembly" className="discover">행사 살펴보기 <span>↓</span></a>
         </div>
       </section>
@@ -165,7 +167,7 @@ export default function Home() {
       </section>
 
       <footer>
-        <a className="brand inverse" href="#top">AGENDA<span>·</span>NOW</a>
+        <a className="brand footer-logo" href="#top"><img src="/gs-enr-logo.png" alt="GS E&R" /></a>
         <p>정책과 비즈니스가 만나는 순간을<br />가장 먼저 발견하세요.</p>
         <div><span>DATA SOURCE</span><a href="https://open.assembly.go.kr" target="_blank" rel="noreferrer">열린국회정보 ↗</a></div>
         <small>© 2026 AGENDA NOW</small>
