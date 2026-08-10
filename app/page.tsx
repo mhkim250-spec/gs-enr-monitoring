@@ -15,6 +15,19 @@ type AssemblyEvent = {
 };
 
 type KorchamEvent = { id: string; title: string; date: string; detailUrl: string };
+type ClimateSourceEvent = { id:string; title:string; date:string; location:string; host:string; posterUrl:string; detailUrl:string };
+
+function ClimateSourceSection({ id, number, title, events, loading, error }: { id:string; number:string; title:string; events:ClimateSourceEvent[]; loading:boolean; error:string }) {
+  return <section className="events-section climate-section" id={id}>
+    <div className="section-head"><div><p className="section-number">{number} / SOURCE</p><h2>{title}</h2></div><div className="section-tools"><p>최신 <strong>{events.length}</strong>개 행사</p></div></div>
+    {loading && <div className="status-card" role="status"><span className="loader" /><p>최신 행사를 확인하고 있습니다.</p></div>}
+    {!loading && error && <div className="status-card error" role="alert"><span>!</span><div><h3>데이터를 불러오지 못했습니다</h3><p>{error}</p></div></div>}
+    <div className="event-grid climate-grid">{events.map((event, index) => <article className="event-card" key={event.id}>
+      <div className="poster-wrap">{event.posterUrl ? <img src={event.posterUrl} alt={`${event.title} 포스터`} loading="lazy" /> : <div className="poster-fallback"><b>CLIMATE</b><span>POLICY<br />EVENT</span></div>}<span className="card-index">{String(index+1).padStart(2,"0")}</span></div>
+      <div className="card-body"><div className="tags"><span>#기후</span><span>#에너지</span></div><h3>{event.title}</h3><dl><div><dt>일시</dt><dd>{event.date}</dd></div><div><dt>장소</dt><dd>{event.location}</dd></div><div><dt>주최</dt><dd>{event.host}</dd></div></dl><div className="card-links"><a href={event.detailUrl} target="_blank" rel="noreferrer">행사 자세히 보기 <span>↗</span></a>{event.posterUrl && <a className="poster-link" href={event.posterUrl} target="_blank" rel="noreferrer">포스터 원본</a>}</div></div>
+    </article>)}</div>
+  </section>;
+}
 
 const KEYWORDS = [
   "탄소", "에너지", "NDC", "배출권", "PPA", "분산에너지", "수소", "특구", "원전",
@@ -43,6 +56,10 @@ export default function Home() {
   const [korchamEvents, setKorchamEvents] = useState<KorchamEvent[]>([]);
   const [korchamLoading, setKorchamLoading] = useState(true);
   const [korchamError, setKorchamError] = useState("");
+  const [climateForumEvents, setClimateForumEvents] = useState<ClimateSourceEvent[]>([]);
+  const [pcccrEvents, setPcccrEvents] = useState<ClimateSourceEvent[]>([]);
+  const [climateLoading, setClimateLoading] = useState(true);
+  const [climateError, setClimateError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -66,6 +83,10 @@ export default function Home() {
         if (reason.name !== "AbortError") setKorchamError(reason.message);
       })
       .finally(() => setKorchamLoading(false));
+    fetch("/api/climate-sources", { signal: controller.signal })
+      .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error || "기후 행사 정보를 불러오지 못했습니다."); setClimateForumEvents(data.climateForum || []); setPcccrEvents(data.pcccr || []); })
+      .catch((reason) => { if (reason.name !== "AbortError") setClimateError(reason.message); })
+      .finally(() => setClimateLoading(false));
     return () => controller.abort();
   }, []);
 
@@ -89,11 +110,14 @@ export default function Home() {
         <nav aria-label="주요 메뉴">
           <a className="active" href="#assembly">국회</a>
           <a href="#korcham">대한상의</a>
+          <a href="#climateforum">기후변화포럼</a>
+          <a href="#pcccr">기후위기위원회</a>
         </nav>
         <div className="live"><i /> 매일 업데이트</div>
       </header>
 
       <section className="hero" id="top">
+        <div className="energy-visual" aria-hidden="true"><span /><span /><span /></div>
         <div className="eyebrow">GS E&R · PUBLIC AFFAIRS</div>
         <h1>GS E&R<br /><em>대외협력 모니터링</em></h1>
         <div className="hero-bottom">
@@ -209,10 +233,13 @@ export default function Home() {
         </div>
       </section>
 
+      <ClimateSourceSection id="climateforum" number="03" title="기후변화포럼" events={climateForumEvents} loading={climateLoading} error={climateError} />
+      <ClimateSourceSection id="pcccr" number="04" title="기후위기위원회" events={pcccrEvents} loading={climateLoading} error={climateError} />
+
       <footer>
         <a className="brand footer-logo" href="#top"><img src="/gs-enr-logo.png" alt="GS E&R" /></a>
         <p>정책과 비즈니스가 만나는 순간을<br />가장 먼저 발견하세요.</p>
-        <div><span>DATA SOURCES</span><a href="https://open.assembly.go.kr" target="_blank" rel="noreferrer">열린국회정보 ↗</a><a href="https://www.korcham.net/nCham/Service/Event/appl/KcciNewsList.asp" target="_blank" rel="noreferrer">대한상공회의소 ↗</a></div>
+        <div><span>DATA SOURCES</span><a href="https://open.assembly.go.kr" target="_blank" rel="noreferrer">열린국회정보 ↗</a><a href="https://www.korcham.net/nCham/Service/Event/appl/KcciNewsList.asp" target="_blank" rel="noreferrer">대한상공회의소 ↗</a><a href="https://www.climateforum.or.kr/event" target="_blank" rel="noreferrer">국회기후변화포럼 ↗</a><a href="https://www.pcccr.go.kr/base/board/list?boardManagementNo=56&menuLevel=2&menuNo=150" target="_blank" rel="noreferrer">국가기후위기대응위원회 ↗</a></div>
         <small>© 2026 AGENDA NOW</small>
       </footer>
     </main>
