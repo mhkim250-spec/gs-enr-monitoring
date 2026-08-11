@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type AssemblyEvent = {
   id: string;
@@ -73,35 +73,52 @@ export default function Home() {
   const [pcccrEvents, setPcccrEvents] = useState<ClimateSourceEvent[]>([]);
   const [climateLoading, setClimateLoading] = useState(true);
   const [climateError, setClimateError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const refreshEvents = useCallback(async (manual = false) => {
+    if (manual) setRefreshing(true);
+    setError(""); setKorchamError(""); setClimateError("");
+    const cacheBuster = Date.now();
+    const getJson = async (path: string) => {
+      const response = await fetch(`${path}?refresh=${cacheBuster}`, { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "행사 정보를 불러오지 못했습니다.");
+      return data;
+    };
+    const results = await Promise.allSettled([
+      getJson("/api/events"), getJson("/api/korcham"), getJson("/api/climate-sources"),
+    ]);
+    if (results[0].status === "fulfilled") setEvents(results[0].value.events || []);
+    else setError(results[0].reason.message);
+    if (results[1].status === "fulfilled") setKorchamEvents(results[1].value.events || []);
+    else setKorchamError(results[1].reason.message);
+    if (results[2].status === "fulfilled") {
+      setClimateForumEvents(results[2].value.climateForum || []);
+      setPcccrEvents(results[2].value.pcccr || []);
+    } else setClimateError(results[2].reason.message);
+    setLoading(false); setKorchamLoading(false); setClimateLoading(false);
+    setLastUpdated(new Date());
+    setRefreshing(false);
+  }, []);
+
+  useEffect(() => { void refreshEvents(); }, [refreshEvents]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/events", { signal: controller.signal })
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "행사 정보를 불러오지 못했습니다.");
-        setEvents(data.events || []);
-      })
-      .catch((reason) => {
-        if (reason.name !== "AbortError") setError(reason.message);
-      })
-      .finally(() => setLoading(false));
-    fetch("/api/korcham", { signal: controller.signal })
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "대한상의 행사 정보를 불러오지 못했습니다.");
-        setKorchamEvents(data.events || []);
-      })
-      .catch((reason) => {
-        if (reason.name !== "AbortError") setKorchamError(reason.message);
-      })
-      .finally(() => setKorchamLoading(false));
-    fetch("/api/climate-sources", { signal: controller.signal })
-      .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error || "기후 행사 정보를 불러오지 못했습니다."); setClimateForumEvents(data.climateForum || []); setPcccrEvents(data.pcccr || []); })
-      .catch((reason) => { if (reason.name !== "AbortError") setClimateError(reason.message); })
-      .finally(() => setClimateLoading(false));
-    return () => controller.abort();
-  }, []);
+    let timer: ReturnType<typeof setTimeout>;
+    const scheduleNextRefresh = () => {
+      const now = new Date();
+      const next = new Date(now);
+      next.setHours(9, 0, 0, 0);
+      if (next <= now) next.setDate(next.getDate() + 1);
+      timer = setTimeout(async () => {
+        await refreshEvents();
+        scheduleNextRefresh();
+      }, next.getTime() - now.getTime());
+    };
+    scheduleNextRefresh();
+    return () => clearTimeout(timer);
+  }, [refreshEvents]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("ko");
@@ -129,7 +146,14 @@ export default function Home() {
           <a href="#climateforum">기후변화포럼</a>
           <a href="#pcccr">기후위기위원회</a>
         </nav>
-        <div className="live"><i /> 매일 업데이트</div>
+        <div className="refresh-controls">
+          <div className="live"><i /> 매일 09:00 자동 업데이트</div>
+          <button className="refresh-button" onClick={() => void refreshEvents(true)} disabled={refreshing}>
+            <span aria-hidden="true" className={refreshing ? "spinning" : ""}>↻</span>
+            {refreshing ? "업데이트 중" : "지금 업데이트"}
+          </button>
+          {lastUpdated && <time dateTime={lastUpdated.toISOString()}>최근 {lastUpdated.toLocaleTimeString("ko-KR", { hour:"2-digit", minute:"2-digit" })}</time>}
+        </div>
       </header>
 
       <section className="hero" id="top">
