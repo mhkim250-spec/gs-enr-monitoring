@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cachedSourceData, saveSourceData } from "../source-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +36,9 @@ export async function GET() {
       const date = row.match(/(?:20\d{2}[.\/-]\d{1,2}[.\/-]\d{1,2}|\d{2}[.\/-]\d{1,2}[.\/-]\d{1,2})/)?.[0] || "상세 페이지 참조";
       return [{ id: id || `kweia-${index}`, title, date, detailUrl: new URL(link[1].replace(/&amp;/gi, "&"), SOURCE_URL).toString() }];
     }).slice(0, 12);
-    return NextResponse.json({ events, total: events.length }, { headers: { "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=7200" } });
+    return NextResponse.json(await saveSourceData("kweia", { events, total: events.length }), { headers: { "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=7200" } });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "한국풍력산업협회 행사 연결에 실패했습니다." }, { status: 502 });
+    const cached = await cachedSourceData("kweia", error);
+    return cached ? NextResponse.json(cached) : NextResponse.json({ error: error instanceof Error ? error.message : "한국풍력산업협회 행사 연결에 실패했습니다." }, { status: 502 });
   }
 }

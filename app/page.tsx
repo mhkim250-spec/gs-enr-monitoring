@@ -16,6 +16,8 @@ type AssemblyEvent = {
 
 type KorchamEvent = { id: string; title: string; date: string; detailUrl: string };
 type ClimateSourceEvent = { id:string; title:string; date:string; location:string; host:string; posterUrl:string; detailUrl:string };
+type UnifiedEvent = { id:string; source:string; date:string; title:string; url:string; section:string };
+type SourceStatus = { source:string; updated_at?:number; updatedAt?:number; status:string; error?:string | null };
 
 function isCurrentOrFuture(dateText: string) {
   const matches = [...dateText.matchAll(/(?:^|\D)(20\d{2}|\d{2})\s*(?:년|[.\/-])\s*(\d{1,2})\s*(?:월|[.\/-])\s*(\d{1,2})/g)];
@@ -84,6 +86,9 @@ export default function Home() {
   const [climateError, setClimateError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [sourceStatuses, setSourceStatuses] = useState<SourceStatus[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [actionMessage, setActionMessage] = useState("");
 
   const refreshEvents = useCallback(async (manual = false) => {
     if (manual) setRefreshing(true);
@@ -110,6 +115,9 @@ export default function Home() {
     } else setClimateError(results[3].reason.message);
     setLoading(false); setKorchamLoading(false); setKweiaLoading(false); setClimateLoading(false);
     setLastUpdated(new Date());
+    const statuses = results.flatMap((result) => result.status === "fulfilled" && result.value.sourceStatus ? [result.value.sourceStatus] : []);
+    const persisted = await fetch(`/api/source-status?refresh=${cacheBuster}`, { cache:"no-store" }).then((response) => response.json()).catch(() => ({ statuses:[] }));
+    setSourceStatuses(persisted.statuses?.length ? persisted.statuses : statuses);
     setRefreshing(false);
   }, []);
 
@@ -143,16 +151,30 @@ export default function Home() {
     );
   }, [events, query]);
 
-  const currentKorchamEvents = useMemo(() => korchamEvents.filter((event) => isCurrentOrFuture(event.date)), [korchamEvents]);
-  const currentKweiaEvents = useMemo(() => kweiaEvents.filter((event) => isCurrentOrFuture(event.date)), [kweiaEvents]);
-  const summaryEvents = useMemo(() => [
+  const needle = query.trim().toLocaleLowerCase("ko");
+  const matchesQuery = useCallback((...values:string[]) => !needle || values.join(" ").toLocaleLowerCase("ko").includes(needle), [needle]);
+  const currentKorchamEvents = useMemo(() => korchamEvents.filter((event) => isCurrentOrFuture(event.date) && matchesQuery(event.title, event.date)), [korchamEvents, matchesQuery]);
+  const currentKweiaEvents = useMemo(() => kweiaEvents.filter((event) => isCurrentOrFuture(event.date) && matchesQuery(event.title, event.date)), [kweiaEvents, matchesQuery]);
+  const filteredClimateForumEvents = useMemo(() => climateForumEvents.filter((event) => matchesQuery(event.title, event.date, event.host, event.location)), [climateForumEvents, matchesQuery]);
+  const filteredPcccrEvents = useMemo(() => pcccrEvents.filter((event) => matchesQuery(event.title, event.date, event.host, event.location)), [pcccrEvents, matchesQuery]);
+  const allCurrentEvents = useMemo<UnifiedEvent[]>(() => [
     ...events.filter((event) => isCurrentOrFuture(event.date)).map((event) => ({ id:`assembly-${event.id}`, source:"국회", date:event.date, title:event.title, url:event.detailUrl || event.posterUrl, section:"#assembly" })),
     ...currentKorchamEvents.map((event) => ({ id:`korcham-${event.id}`, source:"대한상의", date:event.date, title:event.title, url:event.detailUrl, section:"#korcham" })),
     ...currentKweiaEvents.map((event) => ({ id:`kweia-${event.id}`, source:"풍력산업협회", date:event.date, title:event.title, url:event.detailUrl, section:"#kweia" })),
     ...climateForumEvents.filter((event) => isCurrentOrFuture(event.date)).map((event) => ({ id:`forum-${event.id}`, source:"기후변화포럼", date:event.date, title:event.title, url:event.detailUrl, section:"#climateforum" })),
     ...pcccrEvents.filter((event) => isCurrentOrFuture(event.date)).map((event) => ({ id:`pcccr-${event.id}`, source:"기후위기위원회", date:event.date, title:event.title, url:event.detailUrl, section:"#pcccr" })),
-  ].sort((a, b) => eventTimestamp(a.date) - eventTimestamp(b.date)).slice(0, 6), [events, currentKorchamEvents, currentKweiaEvents, climateForumEvents, pcccrEvents]);
-  const totalCurrentEvents = events.filter((event) => isCurrentOrFuture(event.date)).length + currentKorchamEvents.length + currentKweiaEvents.length + climateForumEvents.filter((event) => isCurrentOrFuture(event.date)).length + pcccrEvents.filter((event) => isCurrentOrFuture(event.date)).length;
+  ].filter((event) => matchesQuery(event.title, event.source, event.date)).sort((a, b) => eventTimestamp(a.date) - eventTimestamp(b.date)), [events, currentKorchamEvents, currentKweiaEvents, climateForumEvents, pcccrEvents, matchesQuery]);
+  const calendarStart = useMemo(() => { const date=new Date(); const day=(date.getDay()+6)%7; date.setDate(date.getDate()-day); date.setHours(0,0,0,0); return date; }, []);
+  const calendarDays = useMemo(() => Array.from({ length:14 }, (_, index) => { const date=new Date(calendarStart); date.setDate(date.getDate()+index); return date; }), [calendarStart]);
+  const calendarEnd = useMemo(() => { const date=new Date(calendarStart); date.setDate(date.getDate()+14); return date.getTime(); }, [calendarStart]);
+  const summaryEvents = useMemo(() => allCurrentEvents.filter((event) => { const stamp=eventTimestamp(event.date); return stamp >= calendarStart.getTime() && stamp < calendarEnd; }), [allCurrentEvents, calendarStart, calendarEnd]);
+  const reportEvents = selectedIds.length ? summaryEvents.filter((event) => selectedIds.includes(event.id)) : summaryEvents;
+  const reportText = reportEvents.map((event, index) => `${index+1}. [${event.source}] ${event.date} ${event.title}\n${event.url}`).join("\n\n");
+  const copyText = async (text:string, message:string) => { await navigator.clipboard.writeText(text); setActionMessage(message); setTimeout(() => setActionMessage(""), 2200); };
+  const downloadFile = (content:string, type:string, name:string) => { const url=URL.createObjectURL(new Blob([content], { type })); const anchor=document.createElement("a"); anchor.href=url; anchor.download=name; anchor.click(); URL.revokeObjectURL(url); };
+  const downloadTable = () => downloadFile(`\ufeff출처,일정,행사명,링크\n${reportEvents.map((event) => [event.source,event.date,event.title,event.url].map((value) => `"${value.replaceAll('"','""')}"`).join(",")).join("\n")}`, "text/csv;charset=utf-8", "주간-행사목록.csv");
+  const downloadExcel = () => downloadFile(`\ufeff<html><meta charset="utf-8"><table><tr><th>출처</th><th>일정</th><th>행사명</th><th>링크</th></tr>${reportEvents.map((event) => `<tr><td>${event.source}</td><td>${event.date}</td><td>${event.title}</td><td>${event.url}</td></tr>`).join("")}</table></html>`, "application/vnd.ms-excel", "주간-행사목록.xls");
+  const emailReport = () => { const body=`안녕하세요.\n\n이번 주 및 다음 주 주요 행사 ${reportEvents.length}건을 공유드립니다.\n\n${reportText}\n\n감사합니다.`; window.location.href=`mailto:?subject=${encodeURIComponent("[데일리 브리핑] 주요 대외 행사")}&body=${encodeURIComponent(body)}`; };
 
   return (
     <main>
@@ -188,19 +210,43 @@ export default function Home() {
 
       <section className="summary-dashboard" aria-labelledby="summary-title">
         <div className="summary-heading">
-          <div><p className="section-number">AT A GLANCE</p><h2 id="summary-title">최신 행사 요약</h2></div>
-          <div className="summary-stats"><span><strong>{totalCurrentEvents}</strong> 예정 행사</span><span><strong>5</strong> 연결 출처</span></div>
+          <div><p className="section-number">TWO-WEEK CALENDAR</p><h2 id="summary-title">이번 주 · 다음 주</h2></div>
+          <label className="global-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="전체 출처 검색" aria-label="전체 출처 행사 검색" /></label>
         </div>
         {loading && korchamLoading && climateLoading && <div className="summary-loading"><span className="loader" /> 최신 행사를 모으고 있습니다.</div>}
         {!loading && summaryEvents.length === 0 && <div className="summary-loading">현재 표시할 예정 행사가 없습니다.</div>}
-        <div className="summary-grid">
-          {summaryEvents.map((event, index) => <article className="summary-card" key={event.id}>
-            <div className="summary-meta"><span>{event.source}</span><b>{String(index + 1).padStart(2, "0")}</b></div>
-            <time>{event.date}</time>
-            <h3>{event.title}</h3>
-            <div className="summary-links"><a href={event.section}>섹션 보기</a><a href={event.url || event.section} target={event.url ? "_blank" : undefined} rel={event.url ? "noreferrer" : undefined}>원문 ↗</a></div>
-          </article>)}
+        <div className="calendar-toolbar" aria-label="행사 보고 도구">
+          <span>{selectedIds.length ? `${selectedIds.length}개 선택됨` : `${summaryEvents.length}개 행사`}</span>
+          <button onClick={() => void copyText(reportText, "행사 목록을 복사했습니다.")}>선택 목록 복사</button>
+          <button onClick={downloadTable}>표 다운로드</button>
+          <button onClick={downloadExcel}>Excel</button>
+          <button onClick={() => window.print()}>PDF</button>
+          <button onClick={emailReport}>이메일 보고문</button>
+          {selectedIds.length > 0 && <button onClick={() => setSelectedIds([])}>선택 해제</button>}
         </div>
+        {actionMessage && <p className="action-message" role="status">{actionMessage}</p>}
+        <div className="two-week-calendar">
+          {[0,1].map((week) => <section className="calendar-week" key={week} aria-label={week === 0 ? "이번 주" : "다음 주"}>
+            <h3>{week === 0 ? "이번 주" : "다음 주"}</h3>
+            <div className="calendar-days">
+              {calendarDays.slice(week*7, week*7+7).map((day) => {
+                const dayEvents=summaryEvents.filter((event) => { const stamp=eventTimestamp(event.date); return stamp >= day.getTime() && stamp < day.getTime()+86400000; });
+                return <div className={`calendar-day ${day.toDateString() === new Date().toDateString() ? "today" : ""}`} key={day.toISOString()}>
+                  <div className="day-head"><span>{["일","월","화","수","목","금","토"][day.getDay()]}</span><strong>{day.getMonth()+1}/{day.getDate()}</strong></div>
+                  <div className="day-events">{dayEvents.map((event) => <label className="calendar-event" key={event.id}>
+                    <input type="checkbox" checked={selectedIds.includes(event.id)} onChange={(change) => setSelectedIds((current) => change.target.checked ? [...current,event.id] : current.filter((id) => id !== event.id))} />
+                    <span className="event-source">{event.source}</span><b>{event.title}</b>
+                    <span className="event-actions"><a href={event.url} target="_blank" rel="noreferrer">원문 ↗</a><button type="button" onClick={(click) => { click.preventDefault(); void copyText(`${event.title}\n${event.url}`, "행사 링크를 복사했습니다."); }}>링크 복사</button></span>
+                  </label>)}</div>
+                </div>;
+              })}
+            </div>
+          </section>)}
+        </div>
+        <div className="source-health" aria-label="출처별 갱신 상태">
+          {[{key:"assembly",label:"국회"},{key:"korcham",label:"대한상의"},{key:"kweia",label:"풍력산업협회"},{key:"climate",label:"기후변화포럼·기후위기위원회"}].map((item) => { const status=sourceStatuses.find((entry) => entry.source === item.key); const updated=status?.updated_at || status?.updatedAt; return <div key={item.key}><i className={status?.status === "stale" ? "stale" : ""} /><span>{item.label}</span><b>{status?.status === "stale" ? "저장 데이터" : status ? "정상" : "확인 중"}</b>{updated && <time>{new Date(updated).toLocaleString("ko-KR", { month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit" })}</time>}</div>; })}
+        </div>
+        <aside className="daily-briefing"><div><span>DAILY BRIEFING</span><h3>오늘의 대외 행사 브리핑</h3><p>오늘부터 다음 주까지 총 {summaryEvents.length}건의 일정이 있습니다. 선택한 행사만 복사하거나 이메일 보고문으로 정리할 수 있습니다.</p></div><button onClick={emailReport}>메일로 작성하기 ↗</button></aside>
       </section>
 
       <section className="ticker" aria-label="관심 키워드">
@@ -328,8 +374,8 @@ export default function Home() {
         </div>
       </section>
 
-      <ClimateSourceSection id="climateforum" number="04" title="국회기후변화포럼" events={climateForumEvents} loading={climateLoading} error={climateError} />
-      <ClimateSourceSection id="pcccr" number="05" title="기후위기위원회" events={pcccrEvents} loading={climateLoading} error={climateError} />
+      <ClimateSourceSection id="climateforum" number="04" title="국회기후변화포럼" events={filteredClimateForumEvents} loading={climateLoading} error={climateError} />
+      <ClimateSourceSection id="pcccr" number="05" title="기후위기위원회" events={filteredPcccrEvents} loading={climateLoading} error={climateError} />
 
       <footer>
         <a className="brand footer-logo" href="#top"><img src="/gs-enr-logo.png" alt="GS E&R" /></a>

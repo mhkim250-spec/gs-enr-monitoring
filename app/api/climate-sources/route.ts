@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cachedSourceData, saveSourceData } from "../source-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -51,8 +52,9 @@ export async function GET() {
     ]);
     if (!forumResponse.ok || !pcccrResponse.ok) throw new Error("기후 행사 원문 사이트 연결에 실패했습니다.");
     const [forumHtml, pcccrHtml] = await Promise.all([forumResponse.text(), pcccrResponse.text()]);
-    return NextResponse.json({ climateForum:parseClimateForum(forumHtml), pcccr:parsePcccr(pcccrHtml) }, { headers:{ "Cache-Control":"public, s-maxage=1800, stale-while-revalidate=7200" } });
+    return NextResponse.json(await saveSourceData("climate", { climateForum:parseClimateForum(forumHtml), pcccr:parsePcccr(pcccrHtml) }), { headers:{ "Cache-Control":"public, s-maxage=1800, stale-while-revalidate=7200" } });
   } catch (error) {
-    return NextResponse.json({ error:error instanceof Error ? error.message : "기후 행사 정보를 불러오지 못했습니다." }, { status:502 });
+    const cached = await cachedSourceData("climate", error);
+    return cached ? NextResponse.json(cached) : NextResponse.json({ error:error instanceof Error ? error.message : "기후 행사 정보를 불러오지 못했습니다." }, { status:502 });
   }
 }

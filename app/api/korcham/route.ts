@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cachedSourceData, saveSourceData } from "../source-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -38,10 +39,11 @@ export async function GET() {
       if (!title) return [];
       return [{ id: args[1] || `korcham-${index}`, title, date: clean(dateMatch[1]), detailUrl }];
     });
-    return NextResponse.json({ events, total: events.length }, {
+    return NextResponse.json(await saveSourceData("korcham", { events, total: events.length }), {
       headers: { "Cache-Control": "public, s-maxage=900, stale-while-revalidate=3600" },
     });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "대한상의 행사 연결에 실패했습니다." }, { status: 502 });
+    const cached = await cachedSourceData("korcham", error);
+    return cached ? NextResponse.json(cached) : NextResponse.json({ error: error instanceof Error ? error.message : "대한상의 행사 연결에 실패했습니다." }, { status: 502 });
   }
 }

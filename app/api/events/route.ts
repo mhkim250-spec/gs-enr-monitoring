@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cachedSourceData, saveSourceData } from "../source-cache";
 export const dynamic = "force-dynamic";
 
 const KEYWORDS = ["탄소","에너지","NDC","배출권","PPA","분산에너지","수소","특구","원전","석탄","전력","LNG","전기","전기요금","SMP","REC","열병합","송전","배전","계통","ESS","출력제어","열요금","데이터센터","RE100","에너지 고속도로","온실가스","신재생","산업안전","탄소중립","전력망","공시","지속가능","집단에너지","VPP","EMS","에너지 플랫폼","디지털 트윈","CBAM","직접전력거래","송배전 요금","ESG 공시","공급망 실사","CCUS","Scope 3","유연성 자원","전력 계통 보강","AI","메가"];
@@ -67,8 +68,9 @@ export async function GET() {
       const normalized = event.title.toLocaleLowerCase("ko");
       return event.title && event.keywords.length > 0 && !EXCLUDED_TITLE_WORDS.some((word) => normalized.includes(word));
     }).sort((a,b) => dateKey(b.date).localeCompare(dateKey(a.date)));
-    return NextResponse.json({ events, total:events.length }, { headers:{ "Cache-Control":"public, s-maxage=1800, stale-while-revalidate=86400" } });
+    return NextResponse.json(await saveSourceData("assembly", { events, total:events.length }), { headers:{ "Cache-Control":"public, s-maxage=1800, stale-while-revalidate=86400" } });
   } catch (error) {
-    return NextResponse.json({ error:error instanceof Error ? error.message : "국회 API 연결에 실패했습니다." }, { status:502 });
+    const cached = await cachedSourceData("assembly", error);
+    return cached ? NextResponse.json(cached) : NextResponse.json({ error:error instanceof Error ? error.message : "국회 API 연결에 실패했습니다." }, { status:502 });
   }
 }
