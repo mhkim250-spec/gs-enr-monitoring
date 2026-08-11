@@ -69,6 +69,9 @@ export default function Home() {
   const [korchamEvents, setKorchamEvents] = useState<KorchamEvent[]>([]);
   const [korchamLoading, setKorchamLoading] = useState(true);
   const [korchamError, setKorchamError] = useState("");
+  const [kweiaEvents, setKweiaEvents] = useState<KorchamEvent[]>([]);
+  const [kweiaLoading, setKweiaLoading] = useState(true);
+  const [kweiaError, setKweiaError] = useState("");
   const [climateForumEvents, setClimateForumEvents] = useState<ClimateSourceEvent[]>([]);
   const [pcccrEvents, setPcccrEvents] = useState<ClimateSourceEvent[]>([]);
   const [climateLoading, setClimateLoading] = useState(true);
@@ -78,7 +81,7 @@ export default function Home() {
 
   const refreshEvents = useCallback(async (manual = false) => {
     if (manual) setRefreshing(true);
-    setError(""); setKorchamError(""); setClimateError("");
+    setError(""); setKorchamError(""); setKweiaError(""); setClimateError("");
     const cacheBuster = Date.now();
     const getJson = async (path: string) => {
       const response = await fetch(`${path}?refresh=${cacheBuster}`, { cache: "no-store" });
@@ -87,17 +90,19 @@ export default function Home() {
       return data;
     };
     const results = await Promise.allSettled([
-      getJson("/api/events"), getJson("/api/korcham"), getJson("/api/climate-sources"),
+      getJson("/api/events"), getJson("/api/korcham"), getJson("/api/kweia"), getJson("/api/climate-sources"),
     ]);
     if (results[0].status === "fulfilled") setEvents(results[0].value.events || []);
     else setError(results[0].reason.message);
     if (results[1].status === "fulfilled") setKorchamEvents(results[1].value.events || []);
     else setKorchamError(results[1].reason.message);
-    if (results[2].status === "fulfilled") {
-      setClimateForumEvents(results[2].value.climateForum || []);
-      setPcccrEvents(results[2].value.pcccr || []);
-    } else setClimateError(results[2].reason.message);
-    setLoading(false); setKorchamLoading(false); setClimateLoading(false);
+    if (results[2].status === "fulfilled") setKweiaEvents(results[2].value.events || []);
+    else setKweiaError(results[2].reason.message);
+    if (results[3].status === "fulfilled") {
+      setClimateForumEvents(results[3].value.climateForum || []);
+      setPcccrEvents(results[3].value.pcccr || []);
+    } else setClimateError(results[3].reason.message);
+    setLoading(false); setKorchamLoading(false); setKweiaLoading(false); setClimateLoading(false);
     setLastUpdated(new Date());
     setRefreshing(false);
   }, []);
@@ -133,6 +138,7 @@ export default function Home() {
   }, [events, query]);
 
   const currentKorchamEvents = useMemo(() => korchamEvents.filter((event) => isCurrentOrFuture(event.date)), [korchamEvents]);
+  const currentKweiaEvents = useMemo(() => kweiaEvents.filter((event) => isCurrentOrFuture(event.date)), [kweiaEvents]);
 
   return (
     <main>
@@ -143,6 +149,7 @@ export default function Home() {
         <nav aria-label="주요 메뉴">
           <a className="active" href="#assembly">국회</a>
           <a href="#korcham">대한상의</a>
+          <a href="#kweia">풍력산업협회</a>
           <a href="#climateforum">기후변화포럼</a>
           <a href="#pcccr">기후위기위원회</a>
         </nav>
@@ -272,13 +279,31 @@ export default function Home() {
         </div>
       </section>
 
-      <ClimateSourceSection id="climateforum" number="03" title="기후변화포럼" events={climateForumEvents} loading={climateLoading} error={climateError} />
-      <ClimateSourceSection id="pcccr" number="04" title="기후위기위원회" events={pcccrEvents} loading={climateLoading} error={climateError} />
+      <section className="events-section kweia-section" id="kweia">
+        <div className="section-head">
+          <div><p className="section-number">03 / SOURCE</p><h2>한국풍력산업협회</h2></div>
+          <div className="section-tools"><span className="open-badge">협회행사</span><p>최근 <strong>{currentKweiaEvents.length}</strong>개의 행사</p></div>
+        </div>
+        {kweiaLoading && <div className="status-card" role="status"><span className="loader" /><p>한국풍력산업협회 행사를 확인하고 있습니다.</p></div>}
+        {!kweiaLoading && kweiaError && <div className="status-card error" role="alert"><span>!</span><div><h3>한국풍력산업협회 데이터를 불러오지 못했습니다.</h3><p>{kweiaError}</p></div></div>}
+        {!kweiaLoading && !kweiaError && currentKweiaEvents.length === 0 && <div className="status-card empty"><span>0</span><p>현재 확인되는 협회행사가 없습니다.</p></div>}
+        <div className="kcci-grid">
+          {currentKweiaEvents.map((event, index) => <a className="kcci-card kweia-card" href={event.detailUrl} target="_blank" rel="noreferrer" key={event.id}>
+            <div className="kcci-card-top"><span>협회행사</span><b>{String(index + 1).padStart(2, "0")}</b></div>
+            <h3>{event.title}</h3>
+            <div className="kcci-date"><span>게시일·행사일</span><strong>{event.date}</strong></div>
+            <div className="kcci-link">한국풍력산업협회에서 보기 <span>↗</span></div>
+          </a>)}
+        </div>
+      </section>
+
+      <ClimateSourceSection id="climateforum" number="04" title="국회기후변화포럼" events={climateForumEvents} loading={climateLoading} error={climateError} />
+      <ClimateSourceSection id="pcccr" number="05" title="기후위기위원회" events={pcccrEvents} loading={climateLoading} error={climateError} />
 
       <footer>
         <a className="brand footer-logo" href="#top"><img src="/gs-enr-logo.png" alt="GS E&R" /></a>
         <p>정책과 비즈니스가 만나는 순간을<br />가장 먼저 발견하세요.</p>
-        <div><span>DATA SOURCES</span><a href="https://open.assembly.go.kr" target="_blank" rel="noreferrer">열린국회정보 ↗</a><a href="https://www.korcham.net/nCham/Service/Event/appl/KcciNewsList.asp" target="_blank" rel="noreferrer">대한상공회의소 ↗</a><a href="https://www.climateforum.or.kr/event" target="_blank" rel="noreferrer">국회기후변화포럼 ↗</a><a href="https://www.pcccr.go.kr/base/board/list?boardManagementNo=56&menuLevel=2&menuNo=150" target="_blank" rel="noreferrer">국가기후위기대응위원회 ↗</a></div>
+        <div><span>DATA SOURCES</span><a href="https://open.assembly.go.kr" target="_blank" rel="noreferrer">열린국회정보 ↗</a><a href="https://www.korcham.net/nCham/Service/Event/appl/KcciNewsList.asp" target="_blank" rel="noreferrer">대한상공회의소 ↗</a><a href="https://www.kweia.or.kr/bbs/board.php?bo_table=notice&sca=%ED%98%91%ED%9A%8C%ED%96%89%EC%82%AC" target="_blank" rel="noreferrer">한국풍력산업협회 ↗</a><a href="https://www.climateforum.or.kr/event" target="_blank" rel="noreferrer">국회기후변화포럼 ↗</a><a href="https://www.pcccr.go.kr/base/board/list?boardManagementNo=56&menuLevel=2&menuNo=150" target="_blank" rel="noreferrer">국가기후위기대응위원회 ↗</a></div>
         <small>© 2026 AGENDA NOW</small>
       </footer>
     </main>
