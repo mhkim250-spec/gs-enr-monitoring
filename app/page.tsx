@@ -60,6 +60,12 @@ function formatDate(value: string) {
   }).format(date);
 }
 
+function eventTimestamp(value: string) {
+  const match = value.match(/(20\d{2})\D+(\d{1,2})\D+(\d{1,2})/);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime();
+}
+
 export default function Home() {
   const [events, setEvents] = useState<AssemblyEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,6 +145,14 @@ export default function Home() {
 
   const currentKorchamEvents = useMemo(() => korchamEvents.filter((event) => isCurrentOrFuture(event.date)), [korchamEvents]);
   const currentKweiaEvents = useMemo(() => kweiaEvents.filter((event) => isCurrentOrFuture(event.date)), [kweiaEvents]);
+  const summaryEvents = useMemo(() => [
+    ...events.filter((event) => isCurrentOrFuture(event.date)).map((event) => ({ id:`assembly-${event.id}`, source:"국회", date:event.date, title:event.title, url:event.detailUrl || event.posterUrl, section:"#assembly" })),
+    ...currentKorchamEvents.map((event) => ({ id:`korcham-${event.id}`, source:"대한상의", date:event.date, title:event.title, url:event.detailUrl, section:"#korcham" })),
+    ...currentKweiaEvents.map((event) => ({ id:`kweia-${event.id}`, source:"풍력산업협회", date:event.date, title:event.title, url:event.detailUrl, section:"#kweia" })),
+    ...climateForumEvents.filter((event) => isCurrentOrFuture(event.date)).map((event) => ({ id:`forum-${event.id}`, source:"기후변화포럼", date:event.date, title:event.title, url:event.detailUrl, section:"#climateforum" })),
+    ...pcccrEvents.filter((event) => isCurrentOrFuture(event.date)).map((event) => ({ id:`pcccr-${event.id}`, source:"기후위기위원회", date:event.date, title:event.title, url:event.detailUrl, section:"#pcccr" })),
+  ].sort((a, b) => eventTimestamp(a.date) - eventTimestamp(b.date)).slice(0, 6), [events, currentKorchamEvents, currentKweiaEvents, climateForumEvents, pcccrEvents]);
+  const totalCurrentEvents = events.filter((event) => isCurrentOrFuture(event.date)).length + currentKorchamEvents.length + currentKweiaEvents.length + climateForumEvents.filter((event) => isCurrentOrFuture(event.date)).length + pcccrEvents.filter((event) => isCurrentOrFuture(event.date)).length;
 
   return (
     <main>
@@ -169,6 +183,23 @@ export default function Home() {
         <div className="hero-bottom">
           <p>에너지·기후·산업 의제와 연결된 국회 행사와<br />대한상의의 접수중 행사를 한곳에서 확인하세요.</p>
           <a href="#assembly" className="discover">행사 살펴보기 <span>↓</span></a>
+        </div>
+      </section>
+
+      <section className="summary-dashboard" aria-labelledby="summary-title">
+        <div className="summary-heading">
+          <div><p className="section-number">AT A GLANCE</p><h2 id="summary-title">최신 행사 요약</h2></div>
+          <div className="summary-stats"><span><strong>{totalCurrentEvents}</strong> 예정 행사</span><span><strong>5</strong> 연결 출처</span></div>
+        </div>
+        {loading && korchamLoading && climateLoading && <div className="summary-loading"><span className="loader" /> 최신 행사를 모으고 있습니다.</div>}
+        {!loading && summaryEvents.length === 0 && <div className="summary-loading">현재 표시할 예정 행사가 없습니다.</div>}
+        <div className="summary-grid">
+          {summaryEvents.map((event, index) => <article className="summary-card" key={event.id}>
+            <div className="summary-meta"><span>{event.source}</span><b>{String(index + 1).padStart(2, "0")}</b></div>
+            <time>{event.date}</time>
+            <h3>{event.title}</h3>
+            <div className="summary-links"><a href={event.section}>섹션 보기</a><a href={event.url || event.section} target={event.url ? "_blank" : undefined} rel={event.url ? "noreferrer" : undefined}>원문 ↗</a></div>
+          </article>)}
         </div>
       </section>
 
