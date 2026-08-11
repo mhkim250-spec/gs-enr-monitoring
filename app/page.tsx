@@ -183,6 +183,7 @@ export default function Home() {
           <img src="/gs-enr-logo.png" alt="GS E&R" />
         </a>
         <nav aria-label="주요 메뉴">
+          <a href="/summary">요약</a>
           <a className="active" href="#assembly">국회</a>
           <a href="#korcham">대한상의</a>
           <a href="#kweia">풍력산업협회</a>
@@ -208,45 +209,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="summary-dashboard" aria-labelledby="summary-title">
-        <div className="summary-heading">
-          <div><p className="section-number">TWO-WEEK CALENDAR</p><h2 id="summary-title">이번 주 · 다음 주</h2></div>
-          <label className="global-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="전체 출처 검색" aria-label="전체 출처 행사 검색" /></label>
-        </div>
-        {loading && korchamLoading && climateLoading && <div className="summary-loading"><span className="loader" /> 최신 행사를 모으고 있습니다.</div>}
-        {!loading && summaryEvents.length === 0 && <div className="summary-loading">현재 표시할 예정 행사가 없습니다.</div>}
-        <div className="calendar-toolbar" aria-label="행사 보고 도구">
-          <span>{selectedIds.length ? `${selectedIds.length}개 선택됨` : `${summaryEvents.length}개 행사`}</span>
-          <button onClick={() => void copyText(reportText, "행사 목록을 복사했습니다.")}>선택 목록 복사</button>
-          <button onClick={downloadTable}>표 다운로드</button>
-          <button onClick={downloadExcel}>Excel</button>
-          <button onClick={() => window.print()}>PDF</button>
-          <button onClick={emailReport}>이메일 보고문</button>
-          {selectedIds.length > 0 && <button onClick={() => setSelectedIds([])}>선택 해제</button>}
-        </div>
-        {actionMessage && <p className="action-message" role="status">{actionMessage}</p>}
-        <div className="two-week-calendar">
-          {[0,1].map((week) => <section className="calendar-week" key={week} aria-label={week === 0 ? "이번 주" : "다음 주"}>
-            <h3>{week === 0 ? "이번 주" : "다음 주"}</h3>
-            <div className="calendar-days">
-              {calendarDays.slice(week*7, week*7+7).map((day) => {
-                const dayEvents=summaryEvents.filter((event) => { const stamp=eventTimestamp(event.date); return stamp >= day.getTime() && stamp < day.getTime()+86400000; });
-                return <div className={`calendar-day ${day.toDateString() === new Date().toDateString() ? "today" : ""}`} key={day.toISOString()}>
-                  <div className="day-head"><span>{["일","월","화","수","목","금","토"][day.getDay()]}</span><strong>{day.getMonth()+1}/{day.getDate()}</strong></div>
-                  <div className="day-events">{dayEvents.map((event) => <label className="calendar-event" key={event.id}>
-                    <input type="checkbox" checked={selectedIds.includes(event.id)} onChange={(change) => setSelectedIds((current) => change.target.checked ? [...current,event.id] : current.filter((id) => id !== event.id))} />
-                    <span className="event-source">{event.source}</span><b>{event.title}</b>
-                    <span className="event-actions"><a href={event.url} target="_blank" rel="noreferrer">원문 ↗</a><button type="button" onClick={(click) => { click.preventDefault(); void copyText(`${event.title}\n${event.url}`, "행사 링크를 복사했습니다."); }}>링크 복사</button></span>
-                  </label>)}</div>
-                </div>;
-              })}
-            </div>
-          </section>)}
-        </div>
-        <div className="source-health" aria-label="출처별 갱신 상태">
-          {[{key:"assembly",label:"국회"},{key:"korcham",label:"대한상의"},{key:"kweia",label:"풍력산업협회"},{key:"climate",label:"기후변화포럼·기후위기위원회"}].map((item) => { const status=sourceStatuses.find((entry) => entry.source === item.key); const updated=status?.updated_at || status?.updatedAt; return <div key={item.key}><i className={status?.status === "stale" ? "stale" : ""} /><span>{item.label}</span><b>{status?.status === "stale" ? "저장 데이터" : status ? "정상" : "확인 중"}</b>{updated && <time>{new Date(updated).toLocaleString("ko-KR", { month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit" })}</time>}</div>; })}
-        </div>
-        <aside className="daily-briefing"><div><span>DAILY BRIEFING</span><h3>오늘의 대외 행사 브리핑</h3><p>오늘부터 다음 주까지 총 {summaryEvents.length}건의 일정이 있습니다. 선택한 행사만 복사하거나 이메일 보고문으로 정리할 수 있습니다.</p></div><button onClick={emailReport}>메일로 작성하기 ↗</button></aside>
+      <section className="summary-cta" aria-label="행사 요약 대시보드">
+        <div><span>WEEKLY BRIEFING</span><h2>이번 주·다음 주 행사를 한눈에</h2><p>평일 캘린더, 전체 출처 검색, 선택 복사와 보고서 내보내기를 별도 화면에서 이용하세요.</p></div>
+        <a href="/summary">요약 대시보드 열기 <span>→</span></a>
       </section>
 
       <section className="ticker" aria-label="관심 키워드">
