@@ -42,6 +42,9 @@ const worker = {
 
     return handler.fetch(request, env, ctx);
   },
+  async scheduled(_controller: unknown, _env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(fetch("https://agenda-now-assembly.mhkim250.chatgpt.site/api/refresh-all",{method:"POST"}));
+  },
 };
 
 export default worker;

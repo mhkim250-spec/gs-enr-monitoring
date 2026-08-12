@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Sidebar from "../sidebar";
+import { classifyText } from "../intelligence";
 
-type AssemblyEvent = { id:string; title:string; date:string; detailUrl:string; posterUrl:string };
+type AssemblyEvent = { id:string; title:string; date:string; detailUrl:string; posterUrl:string; host?:string; location?:string };
 type SimpleEvent = { id:string; title:string; date:string; detailUrl:string };
 type ClimateEvent = { id:string; title:string; date:string; detailUrl:string };
-type UnifiedEvent = { id:string; source:string; date:string; title:string; url:string; posterUrl?:string };
+type UnifiedEvent = { id:string; source:string; date:string; title:string; url:string; posterUrl?:string; host:string; location:string; topics:string[]; score:number; importance:string };
 type SourceStatus = { source:string; updated_at?:number; updatedAt?:number; status:string };
 
 function isCurrentOrFuture(dateText:string) {
@@ -59,12 +60,12 @@ export default function SummaryPage() {
   useEffect(()=>{ void refresh(); },[refresh]);
 
   const allEvents=useMemo<UnifiedEvent[]>(()=>[
-    ...events.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`assembly-${event.id}`,source:"국회",date:event.date,title:event.title,url:event.detailUrl||event.posterUrl,posterUrl:event.posterUrl})),
-    ...korcham.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`korcham-${event.id}`,source:"대한상의",date:event.date,title:event.title,url:event.detailUrl})),
-    ...kweia.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`kweia-${event.id}`,source:"풍력산업협회",date:event.date,title:event.title,url:event.detailUrl})),
-    ...forum.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`forum-${event.id}`,source:"기후변화포럼",date:event.date,title:event.title,url:event.detailUrl})),
-    ...pcccr.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`pcccr-${event.id}`,source:"기후위기위원회",date:event.date,title:event.title,url:event.detailUrl})),
-  ].sort((a,b)=>eventTimestamp(a.date)-eventTimestamp(b.date)),[events,korcham,kweia,forum,pcccr]);
+    ...events.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`assembly-${event.id}`,source:"국회",date:event.date,title:event.title,url:event.detailUrl||event.posterUrl,posterUrl:event.posterUrl,host:event.host||"국회",location:event.location||""})),
+    ...korcham.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`korcham-${event.id}`,source:"대한상의",date:event.date,title:event.title,url:event.detailUrl,host:"대한상공회의소",location:""})),
+    ...kweia.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`kweia-${event.id}`,source:"풍력산업협회",date:event.date,title:event.title,url:event.detailUrl,host:"한국풍력산업협회",location:""})),
+    ...forum.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`forum-${event.id}`,source:"기후변화포럼",date:event.date,title:event.title,url:event.detailUrl,host:"국회기후변화포럼",location:""})),
+    ...pcccr.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`pcccr-${event.id}`,source:"기후위기위원회",date:event.date,title:event.title,url:event.detailUrl,host:"기후위기특별위원회",location:""})),
+  ].map((event)=>({...event,...classifyText(event.title,event.source)})).sort((a,b)=>eventTimestamp(a.date)-eventTimestamp(b.date)),[events,korcham,kweia,forum,pcccr]);
 
   const calendarStart=useMemo(()=>{ const date=new Date(); const day=(date.getDay()+6)%7; date.setDate(date.getDate()-day); date.setHours(0,0,0,0); return date; },[]);
   const calendarDays=useMemo(()=>Array.from({length:10},(_,index)=>{ const date=new Date(calendarStart); date.setDate(date.getDate()+(index<5?index:index+2)); return date; }),[calendarStart]);
@@ -76,7 +77,7 @@ export default function SummaryPage() {
   const copyText=async (text:string,nextMessage:string)=>{ await navigator.clipboard.writeText(text); setMessage(nextMessage); setTimeout(()=>setMessage(""),2200); };
   const download=(content:string,type:string,name:string)=>{ const url=URL.createObjectURL(new Blob([content],{type})); const anchor=document.createElement("a"); anchor.href=url; anchor.download=name; anchor.click(); URL.revokeObjectURL(url); };
   const downloadTable=()=>download(`\ufeff출처,일정,행사명,링크\n${reportEvents.map((event)=>[event.source,event.date,event.title,event.url].map((value)=>`"${value.replaceAll('"','""')}"`).join(",")).join("\n")}`,"text/csv;charset=utf-8","주간-행사목록.csv");
-  const downloadExcel=()=>download(`\ufeff<html><meta charset="utf-8"><table><tr><th>출처</th><th>일정</th><th>행사명</th><th>링크</th></tr>${reportEvents.map((event)=>`<tr><td>${escapeHtml(event.source)}</td><td>${escapeHtml(event.date)}</td><td>${escapeHtml(event.title)}</td><td>${escapeHtml(event.url)}</td></tr>`).join("")}</table></html>`,"application/vnd.ms-excel","주간-행사목록.xls");
+  const downloadExcel=()=>download(`\ufeff<html><meta charset="utf-8"><style>body{font-family:Arial,sans-serif}h1{color:#0867a1}table{border-collapse:collapse;width:100%}th{background:#073d5c;color:white}th,td{border:1px solid #ccdadd;padding:8px;font-size:11px}tr:nth-child(even){background:#f2f7f7}</style><h1>GS E&amp;R 대외협력 주간 행사 보고</h1><p>보고일: ${new Date().toLocaleDateString("ko-KR")} · 총 ${reportEvents.length}건</p><table><tr><th>일자</th><th>출처</th><th>행사명</th><th>주최</th><th>장소</th><th>관련 의제</th><th>중요도</th><th>참석 여부</th><th>담당자</th><th>링크</th><th>메모</th></tr>${reportEvents.map((event)=>`<tr><td>${escapeHtml(event.date)}</td><td>${escapeHtml(event.source)}</td><td>${escapeHtml(event.title)}</td><td>${escapeHtml(event.host)}</td><td>${escapeHtml(event.location)}</td><td>${escapeHtml(event.topics.join(", "))}</td><td>${event.importance} (${event.score})</td><td>검토 전</td><td></td><td><a href="${escapeHtml(event.url)}">원문</a></td><td></td></tr>`).join("")}</table></html>`,"application/vnd.ms-excel","GS-ENR-주간-행사보고.xls");
   const emailReport=()=>{ const body=`안녕하세요.\n\n이번 주 및 다음 주 주요 행사 ${reportEvents.length}건을 공유드립니다.\n\n${reportText}\n\n감사합니다.`; window.location.href=`mailto:?subject=${encodeURIComponent("[데일리 브리핑] 주요 대외 행사")}&body=${encodeURIComponent(body)}`; };
 
   return <main className="summary-page site-content">
@@ -85,7 +86,7 @@ export default function SummaryPage() {
       <div className="topbar-title"><b>요약 대시보드</b><span>이번 주와 다음 주 주요 일정</span></div>
       <div className="refresh-controls"><button className="refresh-button" onClick={()=>void refresh(true)} disabled={refreshing}><span className={refreshing?"spinning":""}>↻</span> {refreshing?"업데이트 중":"지금 업데이트"}</button>{lastUpdated&&<time>{lastUpdated.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})}</time>}</div>
     </header>
-    <section className="summary-dashboard" aria-labelledby="summary-title">
+    <section className="summary-dashboard" aria-labelledby="summary-title"><div className="print-report-head"><img src="/gs-enr-logo.png" alt="GS E&R"/><div><h1>대외협력 주간 행사 보고</h1><p>보고일 {new Date().toLocaleDateString("ko-KR")} · 총 {reportEvents.length}건</p></div></div>
       <div className="summary-heading"><div><p className="section-number">WEEKDAY CALENDAR</p><h1 id="summary-title">이번 주 · 다음 주</h1></div><label className="global-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="전체 출처 검색" aria-label="전체 출처 행사 검색" /></label></div>
       <div className="summary-overview" aria-label="행사 요약"><div><span>표시 중인 행사</span><strong>{summaryEvents.length}</strong><small>건</small></div><div><span>선택한 행사</span><strong>{selectedIds.length}</strong><small>건</small></div><div><span>조회 범위</span><b>이번 주 + 다음 주</b><small>월–금</small></div></div>
       {loading&&<div className="summary-loading"><span className="loader" /> 최신 행사를 모으고 있습니다.</div>}
@@ -93,7 +94,7 @@ export default function SummaryPage() {
       <div className="calendar-toolbar"><span>{selectedIds.length?`${selectedIds.length}개 선택됨`:`${summaryEvents.length}개 행사`}</span><button onClick={()=>void copyText(reportText,"행사 목록을 복사했습니다.")}>선택 목록 복사</button><button onClick={downloadTable}>표 다운로드</button><button onClick={downloadExcel}>Excel</button><button onClick={()=>window.print()}>PDF</button><button onClick={emailReport}>이메일 보고문</button>{selectedIds.length>0&&<button onClick={()=>setSelectedIds([])}>선택 해제</button>}</div>
       {message&&<p className="action-message" role="status">{message}</p>}
       <div className="two-week-calendar">{[0,1].map((week)=><section className="calendar-week" key={week}><div className="calendar-week-title"><span>{week===0?"THIS WEEK":"NEXT WEEK"}</span><h2>{week===0?"이번 주":"다음 주"}</h2></div><div className="calendar-days">{calendarDays.slice(week*5,week*5+5).map((day)=>{ const dayEvents=summaryEvents.filter((event)=>{ const stamp=eventTimestamp(event.date); return stamp>=day.getTime()&&stamp<day.getTime()+86400000; }); return <div className={`calendar-day ${day.toDateString()===new Date().toDateString()?"today":""}`} key={day.toISOString()}><div className="day-head"><span>{["일","월","화","수","목","금","토"][day.getDay()]}요일</span><strong>{day.getMonth()+1}월 {day.getDate()}일</strong><em>{dayEvents.length}건</em></div><div className="day-events">{dayEvents.map((event)=><label className="calendar-event" key={event.id}><input type="checkbox" checked={selectedIds.includes(event.id)} onChange={(change)=>setSelectedIds((current)=>change.target.checked?[...current,event.id]:current.filter((id)=>id!==event.id))}/><span className="event-source">{event.source}</span><b>{event.title}</b><span className="event-actions"><a href={event.url} target="_blank" rel="noreferrer">원문 ↗</a>{event.source==="국회"&&event.posterUrl&&<a href={event.posterUrl} target="_blank" rel="noreferrer">포스터 ↗</a>}<button type="button" onClick={(click)=>{click.preventDefault();void copyText(`${event.title}\n${event.url}`,"행사 링크를 복사했습니다.");}}>링크 복사</button></span></label>)}</div></div>; })}</div></section>)}</div>
-      <aside className="daily-briefing"><div><span>DAILY BRIEFING</span><h2>오늘의 대외 행사 브리핑</h2><p>이번 주와 다음 주 평일 일정은 총 {summaryEvents.length}건입니다. 선택한 행사만 복사하거나 이메일 보고문으로 정리할 수 있습니다.</p></div><button onClick={emailReport}>메일로 작성하기 ↗</button></aside>
+      <aside className="daily-briefing"><div><span>WEEKLY INSIGHT</span><h2>주간 핵심 일정 요약</h2><p>이번 주와 다음 주 평일 일정은 총 {summaryEvents.length}건이며, GS E&amp;R 핵심·관심 의제 일정은 {summaryEvents.filter(event=>event.score>=65).length}건입니다. 전력·에너지·탄소 정책 영향을 중심으로 참석 필요성을 검토해 주세요.</p></div><button onClick={emailReport}>메일로 작성하기 ↗</button></aside><div className="print-source-note">출처: 국회, 대한상공회의소, 한국풍력산업협회, 국회기후변화포럼, 기후위기특별위원회 · 최종 갱신 {lastUpdated?lastUpdated.toLocaleString("ko-KR"):"확인 중"}</div>
     </section>
   </main>;
 }

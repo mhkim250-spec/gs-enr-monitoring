@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cachedSourceData, getCachedSourceData, saveSourceData } from "../source-cache";
+import { classifyText } from "../../intelligence";
 
 export const dynamic="force-dynamic";
 type Source={key:string;name:string;url:string;articlePattern:RegExp;color:string;logoUrl:string};
@@ -16,7 +17,7 @@ async function readSource(source:Source){
   const response=await fetch(source.url,{headers:{Accept:"text/html","User-Agent":"GS-ENR-News-Monitor/1.0"},cache:"no-store"});
   if(!response.ok) throw new Error(`${source.name} ${response.status}`);
   const html=await response.text(); const seen=new Set<string>();
-  const articles=[...html.matchAll(/<a\b([^>]*?)href=["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi)].flatMap((match,index)=>{
+  const candidates=[...html.matchAll(/<a\b([^>]*?)href=["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi)].flatMap((match,index)=>{
     const href=match[2].replace(/&amp;/gi,"&"); if(!source.articlePattern.test(href)) return [];
     const title=clean(match[4]).replace(/^(?:본문보기|새글)\s*/,"");
     if(title.length<12||title.length>150) return [];
@@ -24,6 +25,7 @@ async function readSource(source:Source){
     const image=match[4].match(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/i)?.[1]||"";
     return [{id:`${source.key}-${index}`,source:source.name,sourceKey:source.key,title,url,imageUrl:image?new URL(image,source.url).toString():"",color:source.color}];
   }).slice(0,8);
+  const articles=await Promise.all(candidates.map(async article=>{try{const detail=await fetch(article.url,{headers:{Accept:"text/html","User-Agent":"GS-ENR-News-Monitor/1.0"},cache:"no-store"}).then(response=>response.ok?response.text():"");const description=clean(detail.match(/<meta[^>]+(?:name|property)=["'](?:description|og:description)["'][^>]+content=["']([^"']+)/i)?.[1]||detail.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["'](?:description|og:description)["']/i)?.[1]||"");const publishedAt=detail.match(/(?:article:published_time|datePublished|등록일|입력)\D{0,40}(20\d{2}[-.\/]\d{1,2}[-.\/]\d{1,2}(?:[T\s]\d{1,2}:\d{2})?)/i)?.[1]||new Date().toISOString().slice(0,10);const intel=classifyText(article.title,description);return {...article,publishedAt,summary:(description||`${intel.topics.join("·")} 관련 주요 보도입니다.`).slice(0,150),topics:intel.topics,relevance:intel.score};}catch{return {...article,publishedAt:new Date().toISOString().slice(0,10),summary:"에너지·전력 산업 관련 주요 보도입니다.",topics:classifyText(article.title).topics,relevance:classifyText(article.title).score};}}));
   return {key:source.key,name:source.name,url:source.url,color:source.color,logoUrl:source.logoUrl,articles};
 }
 
