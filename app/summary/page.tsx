@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Sidebar from "../sidebar";
 
 type AssemblyEvent = { id:string; title:string; date:string; detailUrl:string; posterUrl:string };
 type SimpleEvent = { id:string; title:string; date:string; detailUrl:string };
 type ClimateEvent = { id:string; title:string; date:string; detailUrl:string };
-type UnifiedEvent = { id:string; source:string; date:string; title:string; url:string };
+type UnifiedEvent = { id:string; source:string; date:string; title:string; url:string; posterUrl?:string };
 type SourceStatus = { source:string; updated_at?:number; updatedAt?:number; status:string };
 
 function isCurrentOrFuture(dateText:string) {
@@ -58,7 +59,7 @@ export default function SummaryPage() {
   useEffect(()=>{ void refresh(); },[refresh]);
 
   const allEvents=useMemo<UnifiedEvent[]>(()=>[
-    ...events.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`assembly-${event.id}`,source:"국회",date:event.date,title:event.title,url:event.detailUrl||event.posterUrl})),
+    ...events.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`assembly-${event.id}`,source:"국회",date:event.date,title:event.title,url:event.detailUrl||event.posterUrl,posterUrl:event.posterUrl})),
     ...korcham.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`korcham-${event.id}`,source:"대한상의",date:event.date,title:event.title,url:event.detailUrl})),
     ...kweia.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`kweia-${event.id}`,source:"풍력산업협회",date:event.date,title:event.title,url:event.detailUrl})),
     ...forum.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`forum-${event.id}`,source:"기후변화포럼",date:event.date,title:event.title,url:event.detailUrl})),
@@ -78,10 +79,10 @@ export default function SummaryPage() {
   const downloadExcel=()=>download(`\ufeff<html><meta charset="utf-8"><table><tr><th>출처</th><th>일정</th><th>행사명</th><th>링크</th></tr>${reportEvents.map((event)=>`<tr><td>${escapeHtml(event.source)}</td><td>${escapeHtml(event.date)}</td><td>${escapeHtml(event.title)}</td><td>${escapeHtml(event.url)}</td></tr>`).join("")}</table></html>`,"application/vnd.ms-excel","주간-행사목록.xls");
   const emailReport=()=>{ const body=`안녕하세요.\n\n이번 주 및 다음 주 주요 행사 ${reportEvents.length}건을 공유드립니다.\n\n${reportText}\n\n감사합니다.`; window.location.href=`mailto:?subject=${encodeURIComponent("[데일리 브리핑] 주요 대외 행사")}&body=${encodeURIComponent(body)}`; };
 
-  return <main className="summary-page">
+  return <main className="summary-page site-content">
+    <Sidebar active="summary" />
     <header className="topbar summary-topbar">
-      <a className="brand logo-brand" href="/" aria-label="GS E&R 대외협력 모니터링 홈"><img src="/gs-enr-logo.png" alt="GS E&R" /></a>
-      <nav aria-label="요약 메뉴"><a className="active" href="/summary">요약 대시보드</a><a href="/">전체 행사 보기</a></nav>
+      <div className="topbar-title"><b>요약 대시보드</b><span>이번 주와 다음 주 주요 일정</span></div>
       <div className="refresh-controls"><button className="refresh-button" onClick={()=>void refresh(true)} disabled={refreshing}><span className={refreshing?"spinning":""}>↻</span> {refreshing?"업데이트 중":"지금 업데이트"}</button>{lastUpdated&&<time>{lastUpdated.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})}</time>}</div>
     </header>
     <section className="summary-dashboard" aria-labelledby="summary-title">
@@ -91,7 +92,7 @@ export default function SummaryPage() {
       {!loading&&summaryEvents.length===0&&<div className="summary-loading">현재 표시할 평일 행사가 없습니다.</div>}
       <div className="calendar-toolbar"><span>{selectedIds.length?`${selectedIds.length}개 선택됨`:`${summaryEvents.length}개 행사`}</span><button onClick={()=>void copyText(reportText,"행사 목록을 복사했습니다.")}>선택 목록 복사</button><button onClick={downloadTable}>표 다운로드</button><button onClick={downloadExcel}>Excel</button><button onClick={()=>window.print()}>PDF</button><button onClick={emailReport}>이메일 보고문</button>{selectedIds.length>0&&<button onClick={()=>setSelectedIds([])}>선택 해제</button>}</div>
       {message&&<p className="action-message" role="status">{message}</p>}
-      <div className="two-week-calendar">{[0,1].map((week)=><section className="calendar-week" key={week}><h2>{week===0?"이번 주":"다음 주"}</h2><div className="calendar-days">{calendarDays.slice(week*5,week*5+5).map((day)=>{ const dayEvents=summaryEvents.filter((event)=>{ const stamp=eventTimestamp(event.date); return stamp>=day.getTime()&&stamp<day.getTime()+86400000; }); return <div className={`calendar-day ${day.toDateString()===new Date().toDateString()?"today":""}`} key={day.toISOString()}><div className="day-head"><span>{["일","월","화","수","목","금","토"][day.getDay()]}</span><strong>{day.getMonth()+1}/{day.getDate()}</strong></div><div className="day-events">{dayEvents.map((event)=><label className="calendar-event" key={event.id}><input type="checkbox" checked={selectedIds.includes(event.id)} onChange={(change)=>setSelectedIds((current)=>change.target.checked?[...current,event.id]:current.filter((id)=>id!==event.id))}/><span className="event-source">{event.source}</span><b>{event.title}</b><span className="event-actions"><a href={event.url} target="_blank" rel="noreferrer">원문 ↗</a><button type="button" onClick={(click)=>{click.preventDefault();void copyText(`${event.title}\n${event.url}`,"행사 링크를 복사했습니다.");}}>링크 복사</button></span></label>)}</div></div>; })}</div></section>)}</div>
+      <div className="two-week-calendar">{[0,1].map((week)=><section className="calendar-week" key={week}><div className="calendar-week-title"><span>{week===0?"THIS WEEK":"NEXT WEEK"}</span><h2>{week===0?"이번 주":"다음 주"}</h2></div><div className="calendar-days">{calendarDays.slice(week*5,week*5+5).map((day)=>{ const dayEvents=summaryEvents.filter((event)=>{ const stamp=eventTimestamp(event.date); return stamp>=day.getTime()&&stamp<day.getTime()+86400000; }); return <div className={`calendar-day ${day.toDateString()===new Date().toDateString()?"today":""}`} key={day.toISOString()}><div className="day-head"><span>{["일","월","화","수","목","금","토"][day.getDay()]}요일</span><strong>{day.getMonth()+1}월 {day.getDate()}일</strong><em>{dayEvents.length}건</em></div><div className="day-events">{dayEvents.map((event)=><label className="calendar-event" key={event.id}><input type="checkbox" checked={selectedIds.includes(event.id)} onChange={(change)=>setSelectedIds((current)=>change.target.checked?[...current,event.id]:current.filter((id)=>id!==event.id))}/><span className="event-source">{event.source}</span><b>{event.title}</b><span className="event-actions"><a href={event.url} target="_blank" rel="noreferrer">원문 ↗</a>{event.source==="국회"&&event.posterUrl&&<a href={event.posterUrl} target="_blank" rel="noreferrer">포스터 ↗</a>}<button type="button" onClick={(click)=>{click.preventDefault();void copyText(`${event.title}\n${event.url}`,"행사 링크를 복사했습니다.");}}>링크 복사</button></span></label>)}</div></div>; })}</div></section>)}</div>
       <aside className="daily-briefing"><div><span>DAILY BRIEFING</span><h2>오늘의 대외 행사 브리핑</h2><p>이번 주와 다음 주 평일 일정은 총 {summaryEvents.length}건입니다. 선택한 행사만 복사하거나 이메일 보고문으로 정리할 수 있습니다.</p></div><button onClick={emailReport}>메일로 작성하기 ↗</button></aside>
     </section>
   </main>;

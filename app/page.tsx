@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Sidebar from "./sidebar";
 
 type AssemblyEvent = {
   id: string;
@@ -184,20 +185,10 @@ export default function Home() {
   const emailReport = () => { const body=`안녕하세요.\n\n이번 주 및 다음 주 주요 행사 ${reportEvents.length}건을 공유드립니다.\n\n${reportText}\n\n감사합니다.`; window.location.href=`mailto:?subject=${encodeURIComponent("[데일리 브리핑] 주요 대외 행사")}&body=${encodeURIComponent(body)}`; };
 
   return (
-    <main>
+    <main className="site-content">
+      <Sidebar />
       <header className="topbar">
-        <a className="brand logo-brand" href="#top" aria-label="GS E&R 대외협력 모니터링 홈">
-          <img src="/gs-enr-logo.png" alt="GS E&R" />
-        </a>
-        <nav aria-label="주요 메뉴">
-          <a href="/summary">요약</a>
-          <a className="active" href="#assembly">국회</a>
-          <a href="#korcham">대한상의</a>
-          <a href="#kweia">풍력산업협회</a>
-          <a href="#kpx">전력거래소</a>
-          <a href="#climateforum">기후변화포럼</a>
-          <a href="#pcccr">기후위기위원회</a>
-        </nav>
+        <div className="topbar-title"><b>대외협력 행사 모니터링</b><span>주요 정책·산업 일정을 한곳에서 확인하세요</span></div>
         <div className="refresh-controls">
           <div className="live"><i /> 매일 09:00 자동 업데이트</div>
           <button className="refresh-button" onClick={() => void refreshEvents(true)} disabled={refreshing}>
@@ -230,7 +221,7 @@ export default function Home() {
         <div className="section-head">
           <div>
             <p className="section-number">01 / SOURCE</p>
-            <h2>국회</h2>
+            <img className="source-heading-logo assembly-heading-logo" src="/assembly-logo.png" alt="국회" />
           </div>
           <div className="section-tools">
             <label className="search">
@@ -305,7 +296,7 @@ export default function Home() {
         <div className="section-head">
           <div>
             <p className="section-number">02 / SOURCE</p>
-            <h2>대한상의</h2>
+            <img className="source-heading-logo korcham-heading-logo" src="/korcham-logo.png" alt="대한상공회의소" />
           </div>
           <div className="section-tools">
             <span className="open-badge">● 접수중</span>
@@ -349,7 +340,7 @@ export default function Home() {
 
       <section className="events-section kpx-section" id="kpx">
         <div className="section-head">
-          <div><p className="section-number">04 / SOURCE</p><div className="source-title-with-logo"><h2>전력거래소</h2><img src="/kpx-logo.svg" alt="KPX 전력거래소" /></div></div>
+          <div><p className="section-number">04 / SOURCE</p><div className="source-title-with-logo"><img src="/kpx-logo.svg" alt="KPX 전력거래소" /></div></div>
           <div className="section-tools"><span className="open-badge">공지사항</span><p>최근 <strong>{currentKpxEvents.length}</strong>개 게시물</p></div>
         </div>
         {kpxLoading && <div className="status-card" role="status"><span className="loader" /><p>전력거래소 공지사항을 확인하고 있습니다.</p></div>}
