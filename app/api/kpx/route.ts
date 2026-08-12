@@ -4,6 +4,7 @@ import { cachedSourceData, getCachedSourceData, saveSourceData } from "../source
 export const dynamic = "force-dynamic";
 const SOURCE_URL="https://www.kpx.or.kr/board.es?mid=a11201000000&bid=0042";
 const clean=(value:string)=>value.replace(/<[^>]+>/g," ").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;/gi,"'").replace(/\s+/g," ").trim();
+const withinLastMonth=(value:string)=>{const match=value.match(/(20\d{2})[.\/-](\d{1,2})[.\/-](\d{1,2})/);if(!match)return false;const posted=new Date(Number(match[1]),Number(match[2])-1,Number(match[3]));const cutoff=new Date();cutoff.setMonth(cutoff.getMonth()-1);cutoff.setHours(0,0,0,0);return posted>=cutoff;};
 
 export async function GET(request:Request){
   if(!new URL(request.url).searchParams.has("refresh")){
@@ -24,7 +25,7 @@ export async function GET(request:Request){
       const detailUrl=new URL(link[1].replace(/&amp;/gi,"&"),SOURCE_URL).toString();
       const id=new URL(detailUrl).searchParams.get("list_no")||`kpx-${index}`;
       return title?[{id,title,date,detailUrl}]:[];
-    }).slice(0,5);
+    }).filter((event)=>withinLastMonth(event.date)).slice(0,5);
     if(!events.length) throw new Error("전력거래소 게시물 형식을 확인할 수 없습니다.");
     return NextResponse.json(await saveSourceData("kpx",{events,total:events.length}),{headers:{"Cache-Control":"public, s-maxage=1800, stale-while-revalidate=7200"}});
   }catch(error){

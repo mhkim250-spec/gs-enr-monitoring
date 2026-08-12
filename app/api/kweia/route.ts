@@ -14,6 +14,8 @@ const clean = (value: string) => value
   .replace(/\s+/g, " ")
   .trim();
 
+const withinLastMonth=(value:string)=>{const match=value.match(/(20\d{2}|\d{2})[.\/-](\d{1,2})[.\/-](\d{1,2})/);if(!match)return false;const year=Number(match[1])<100?2000+Number(match[1]):Number(match[1]);const posted=new Date(year,Number(match[2])-1,Number(match[3]));const cutoff=new Date();cutoff.setMonth(cutoff.getMonth()-1);cutoff.setHours(0,0,0,0);return posted>=cutoff;};
+
 export async function GET(request: Request) {
   if (!new URL(request.url).searchParams.has("refresh")) {
     const cached = await getCachedSourceData("kweia");
@@ -39,7 +41,7 @@ export async function GET(request: Request) {
       seen.add(id);
       const date = row.match(/(?:20\d{2}[.\/-]\d{1,2}[.\/-]\d{1,2}|\d{2}[.\/-]\d{1,2}[.\/-]\d{1,2})/)?.[0] || "상세 페이지 참조";
       return [{ id: id || `kweia-${index}`, title, date, detailUrl: new URL(link[1].replace(/&amp;/gi, "&"), SOURCE_URL).toString() }];
-    }).slice(0, 12);
+    }).filter((event)=>withinLastMonth(event.date)).slice(0, 12);
     return NextResponse.json(await saveSourceData("kweia", { events, total: events.length }), { headers: { "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=7200" } });
   } catch (error) {
     const cached = await cachedSourceData("kweia", error);

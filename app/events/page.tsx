@@ -69,6 +69,8 @@ function eventTimestamp(value: string) {
   return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime();
 }
 
+function isWithinLastMonth(value:string){const stamp=eventTimestamp(value);if(stamp===Number.MAX_SAFE_INTEGER)return false;const cutoff=new Date();cutoff.setMonth(cutoff.getMonth()-1);cutoff.setHours(0,0,0,0);return stamp>=cutoff.getTime();}
+
 export default function Home() {
   const [events, setEvents] = useState<AssemblyEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,7 +149,7 @@ export default function Home() {
   const matchesQuery = useCallback((...values:string[]) => !needle || values.join(" ").toLocaleLowerCase("ko").includes(needle), [needle]);
   const currentKorchamEvents = useMemo(() => korchamEvents.filter((event) => isCurrentOrFuture(event.date) && matchesQuery(event.title, event.date)), [korchamEvents, matchesQuery]);
   const currentKweiaEvents = useMemo(() => kweiaEvents.filter((event) => isCurrentOrFuture(event.date) && matchesQuery(event.title, event.date)), [kweiaEvents, matchesQuery]);
-  const currentKpxEvents = useMemo(() => kpxEvents.filter((event) => matchesQuery(event.title, event.date)).slice(0,5), [kpxEvents, matchesQuery]);
+  const currentKpxEvents = useMemo(() => kpxEvents.filter((event) => isWithinLastMonth(event.date) && matchesQuery(event.title, event.date)).slice(0,5), [kpxEvents, matchesQuery]);
   const filteredClimateForumEvents = useMemo(() => climateForumEvents.filter((event) => matchesQuery(event.title, event.date, event.host, event.location)), [climateForumEvents, matchesQuery]);
   const filteredPcccrEvents = useMemo(() => pcccrEvents.filter((event) => matchesQuery(event.title, event.date, event.host, event.location)), [pcccrEvents, matchesQuery]);
   const allCurrentEvents = useMemo<UnifiedEvent[]>(() => [
