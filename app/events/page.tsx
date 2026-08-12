@@ -31,10 +31,10 @@ function isCurrentOrFuture(dateText: string) {
   return endDate >= today;
 }
 
-function ClimateSourceSection({ id, number, title, events, loading, error }: { id:string; number:string; title:string; events:ClimateSourceEvent[]; loading:boolean; error:string }) {
+function ClimateSourceSection({ id, number, title, logo, events, loading, error }: { id:string; number:string; title:string; logo:string; events:ClimateSourceEvent[]; loading:boolean; error:string }) {
   const currentEvents = events.filter((event) => isCurrentOrFuture(event.date));
   return <section className="events-section climate-section" id={id}>
-    <div className="section-head"><div><p className="section-number">{number} / SOURCE</p><h2>{title}</h2></div><div className="section-tools"><p>예정 <strong>{currentEvents.length}</strong>개 행사</p></div></div>
+    <div className="section-head"><div><p className="section-number">{number} / SOURCE</p><img className="source-heading-logo climate-heading-logo" src={logo} alt={title}/></div><div className="section-tools"><p>예정 <strong>{currentEvents.length}</strong>개 행사</p></div></div>
     {loading && <div className="status-card" role="status"><span className="loader" /><p>최신 행사를 확인하고 있습니다.</p></div>}
     {!loading && error && <div className="status-card error" role="alert"><span>!</span><div><h3>데이터를 불러오지 못했습니다</h3><p>{error}</p></div></div>}
     {!loading && !error && currentEvents.length === 0 && <div className="status-card empty"><span>0</span><p>현재 예정된 행사가 없습니다.</p></div>}
@@ -198,7 +198,7 @@ export default function Home() {
         <div className="section-head">
           <div>
             <p className="section-number">01 / SOURCE</p>
-            <img className="source-heading-logo assembly-heading-logo" src="/assembly-logo.png" alt="국회" />
+            <img className="source-heading-logo assembly-heading-logo" src="/assembly-heading.jpg" alt="대한민국 국회" />
           </div>
           <div className="section-tools">
             <label className="search">
@@ -299,7 +299,7 @@ export default function Home() {
 
       <section className="events-section kweia-section" id="kweia">
         <div className="section-head">
-          <div><p className="section-number">03 / SOURCE</p><h2>한국풍력산업협회</h2></div>
+          <div><p className="section-number">03 / SOURCE</p><img className="source-heading-logo wind-heading-logo" src="/wind-association-heading.png" alt="한국풍력산업협회"/></div>
           <div className="section-tools"><span className="open-badge">협회행사</span><p>최근 <strong>{currentKweiaEvents.length}</strong>개의 행사</p></div>
         </div>
         {kweiaLoading && <div className="status-card" role="status"><span className="loader" /><p>한국풍력산업협회 행사를 확인하고 있습니다.</p></div>}
@@ -325,8 +325,8 @@ export default function Home() {
         <div className="kcci-grid kpx-grid">{currentKpxEvents.map((event,index)=><a className="kcci-card kpx-card" href={event.detailUrl} target="_blank" rel="noreferrer" key={event.id}><div className="kcci-card-top"><span>KPX 공지</span><b>{String(index+1).padStart(2,"0")}</b></div><h3>{event.title}</h3><div className="kcci-date"><span>등록일</span><strong>{event.date}</strong></div><div className="kcci-link">전력거래소에서 보기 <span>↗</span></div></a>)}</div>
       </section>
 
-      <ClimateSourceSection id="climateforum" number="05" title="국회기후변화포럼" events={filteredClimateForumEvents} loading={climateLoading} error={climateError} />
-      <ClimateSourceSection id="pcccr" number="06" title="기후위기위원회" events={filteredPcccrEvents} loading={climateLoading} error={climateError} />
+      <ClimateSourceSection id="climateforum" number="05" title="국회기후변화포럼" logo="/climate-forum-heading.png" events={filteredClimateForumEvents} loading={climateLoading} error={climateError} />
+      <ClimateSourceSection id="pcccr" number="06" title="국가기후위기대응위원회" logo="/climate-committee-heading.png" events={filteredPcccrEvents} loading={climateLoading} error={climateError} />
 
       <footer>
         <a className="brand footer-logo" href="#top"><img src="/gs-enr-logo.png" alt="GS E&R" /></a>
