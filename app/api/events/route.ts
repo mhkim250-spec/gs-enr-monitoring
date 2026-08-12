@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cachedSourceData, saveSourceData } from "../source-cache";
+import { cachedSourceData, getCachedSourceData, saveSourceData } from "../source-cache";
 export const dynamic = "force-dynamic";
 
 const KEYWORDS = ["탄소","에너지","NDC","배출권","PPA","분산에너지","수소","특구","원전","석탄","전력","LNG","전기","전기요금","SMP","REC","열병합","송전","배전","계통","ESS","출력제어","열요금","데이터센터","RE100","에너지 고속도로","온실가스","신재생","산업안전","탄소중립","전력망","공시","지속가능","집단에너지","VPP","EMS","에너지 플랫폼","디지털 트윈","CBAM","직접전력거래","송배전 요금","ESG 공시","공급망 실사","CCUS","Scope 3","유연성 자원","전력 계통 보강","AI","메가"];
@@ -33,7 +33,11 @@ const dateKey = (value: string) => {
   return digits.length >= 8 ? digits.slice(0, 8) : "00000000";
 };
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!new URL(request.url).searchParams.has("refresh")) {
+    const cached = await getCachedSourceData("assembly");
+    if (cached) return NextResponse.json(cached, { headers:{ "Cache-Control":"private, no-store" } });
+  }
   const key = process.env.ASSEMBLY_API_KEY;
   if (!key) return NextResponse.json({ error: "국회 API 키가 설정되지 않았습니다." }, { status: 503 });
   try {

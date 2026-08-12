@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cachedSourceData, saveSourceData } from "../source-cache";
+import { cachedSourceData, getCachedSourceData, saveSourceData } from "../source-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +44,11 @@ function parsePcccr(html: string): ClimateEvent[] {
   return events.slice(0, 9);
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!new URL(request.url).searchParams.has("refresh")) {
+    const cached = await getCachedSourceData("climate");
+    if (cached) return NextResponse.json(cached, { headers:{ "Cache-Control":"private, no-store" } });
+  }
   try {
     const [forumResponse, pcccrResponse] = await Promise.all([
       fetch("https://www.climateforum.or.kr/event", { headers:{ "User-Agent":"GS-ENR-Monitor/1.0" }, cache:"no-store" }),

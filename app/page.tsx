@@ -90,12 +90,12 @@ export default function Home() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [actionMessage, setActionMessage] = useState("");
 
-  const refreshEvents = useCallback(async (manual = false) => {
-    if (manual) setRefreshing(true);
+  const refreshEvents = useCallback(async (refreshSource = false) => {
+    if (refreshSource) setRefreshing(true);
     setError(""); setKorchamError(""); setKweiaError(""); setClimateError("");
     const cacheBuster = Date.now();
     const getJson = async (path: string) => {
-      const response = await fetch(`${path}?refresh=${cacheBuster}`, { cache: "no-store" });
+      const response = await fetch(refreshSource ? `${path}?refresh=${cacheBuster}` : path, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "행사 정보를 불러오지 못했습니다.");
       return data;
@@ -114,10 +114,11 @@ export default function Home() {
       setPcccrEvents(results[3].value.pcccr || []);
     } else setClimateError(results[3].reason.message);
     setLoading(false); setKorchamLoading(false); setKweiaLoading(false); setClimateLoading(false);
-    setLastUpdated(new Date());
     const statuses = results.flatMap((result) => result.status === "fulfilled" && result.value.sourceStatus ? [result.value.sourceStatus] : []);
     const persisted = await fetch(`/api/source-status?refresh=${cacheBuster}`, { cache:"no-store" }).then((response) => response.json()).catch(() => ({ statuses:[] }));
     setSourceStatuses(persisted.statuses?.length ? persisted.statuses : statuses);
+    const latest = (persisted.statuses || statuses).reduce((value: number, status: SourceStatus) => Math.max(value, status.updated_at || status.updatedAt || 0), 0);
+    if (latest) setLastUpdated(new Date(latest));
     setRefreshing(false);
   }, []);
 
@@ -131,7 +132,7 @@ export default function Home() {
       next.setHours(9, 0, 0, 0);
       if (next <= now) next.setDate(next.getDate() + 1);
       timer = setTimeout(async () => {
-        await refreshEvents();
+        await refreshEvents(true);
         scheduleNextRefresh();
       }, next.getTime() - now.getTime());
     };

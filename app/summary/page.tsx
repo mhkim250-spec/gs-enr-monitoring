@@ -41,17 +41,18 @@ export default function SummaryPage() {
   const [message,setMessage]=useState("");
   const [lastUpdated,setLastUpdated]=useState<Date|null>(null);
 
-  const refresh=useCallback(async (manual=false) => {
-    if (manual) setRefreshing(true);
+  const refresh=useCallback(async (refreshSource=false) => {
+    if (refreshSource) setRefreshing(true);
     const stamp=Date.now();
-    const getJson=async (path:string) => { const response=await fetch(`${path}?refresh=${stamp}`,{cache:"no-store"}); const data=await response.json(); if(!response.ok) throw new Error(data.error||"행사 정보를 불러오지 못했습니다."); return data; };
+    const getJson=async (path:string) => { const response=await fetch(refreshSource?`${path}?refresh=${stamp}`:path,{cache:"no-store"}); const data=await response.json(); if(!response.ok) throw new Error(data.error||"행사 정보를 불러오지 못했습니다."); return data; };
     const results=await Promise.allSettled([getJson("/api/events"),getJson("/api/korcham"),getJson("/api/kweia"),getJson("/api/climate-sources")]);
     if(results[0].status==="fulfilled") setEvents(results[0].value.events||[]);
     if(results[1].status==="fulfilled") setKorcham(results[1].value.events||[]);
     if(results[2].status==="fulfilled") setKweia(results[2].value.events||[]);
     if(results[3].status==="fulfilled") { setForum(results[3].value.climateForum||[]); setPcccr(results[3].value.pcccr||[]); }
     const persisted=await fetch(`/api/source-status?refresh=${stamp}`,{cache:"no-store"}).then((response)=>response.json()).catch(()=>({statuses:[]}));
-    setStatuses(persisted.statuses||[]); setLoading(false); setRefreshing(false); setLastUpdated(new Date());
+    setStatuses(persisted.statuses||[]); setLoading(false); setRefreshing(false);
+    const latest=(persisted.statuses||[]).reduce((value:number,status:SourceStatus)=>Math.max(value,status.updated_at||status.updatedAt||0),0); if(latest) setLastUpdated(new Date(latest));
   },[]);
 
   useEffect(()=>{ void refresh(); },[refresh]);
@@ -85,6 +86,7 @@ export default function SummaryPage() {
     </header>
     <section className="summary-dashboard" aria-labelledby="summary-title">
       <div className="summary-heading"><div><p className="section-number">WEEKDAY CALENDAR</p><h1 id="summary-title">이번 주 · 다음 주</h1><p className="summary-description">토·일을 제외한 평일 행사만 모았습니다.</p></div><label className="global-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="전체 출처 검색" aria-label="전체 출처 행사 검색" /></label></div>
+      <div className="summary-overview" aria-label="행사 요약"><div><span>표시 중인 행사</span><strong>{summaryEvents.length}</strong><small>건</small></div><div><span>선택한 행사</span><strong>{selectedIds.length}</strong><small>건</small></div><div><span>조회 범위</span><b>이번 주 + 다음 주</b><small>월–금</small></div></div>
       {loading&&<div className="summary-loading"><span className="loader" /> 최신 행사를 모으고 있습니다.</div>}
       {!loading&&summaryEvents.length===0&&<div className="summary-loading">현재 표시할 평일 행사가 없습니다.</div>}
       <div className="calendar-toolbar"><span>{selectedIds.length?`${selectedIds.length}개 선택됨`:`${summaryEvents.length}개 행사`}</span><button onClick={()=>void copyText(reportText,"행사 목록을 복사했습니다.")}>선택 목록 복사</button><button onClick={downloadTable}>표 다운로드</button><button onClick={downloadExcel}>Excel</button><button onClick={()=>window.print()}>PDF</button><button onClick={emailReport}>이메일 보고문</button>{selectedIds.length>0&&<button onClick={()=>setSelectedIds([])}>선택 해제</button>}</div>

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cachedSourceData, saveSourceData } from "../source-cache";
+import { cachedSourceData, getCachedSourceData, saveSourceData } from "../source-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,11 @@ const clean = (value: string) => value
   .replace(/\s+/g, " ")
   .trim();
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!new URL(request.url).searchParams.has("refresh")) {
+    const cached = await getCachedSourceData("kweia");
+    if (cached) return NextResponse.json(cached, { headers:{ "Cache-Control":"private, no-store" } });
+  }
   try {
     const response = await fetch(SOURCE_URL, {
       headers: { Accept: "text/html", "User-Agent": "GS-ENR-Monitor/1.0" },

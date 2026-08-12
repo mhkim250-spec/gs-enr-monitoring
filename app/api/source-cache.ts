@@ -12,6 +12,13 @@ export async function saveSourceData(source: string, data: Record<string, unknow
   return { ...data, sourceStatus: { source, status: "ok", updatedAt } };
 }
 
+export async function getCachedSourceData(source: string) {
+  const row = await db().prepare("SELECT payload, updated_at, status, error FROM source_cache WHERE source = ?")
+    .bind(source).first<CacheRow>();
+  if (!row) return null;
+  return { ...JSON.parse(row.payload), sourceStatus: { source, status: row.status, updatedAt: row.updated_at, error: row.error } };
+}
+
 export async function cachedSourceData(source: string, reason: unknown) {
   const message = reason instanceof Error ? reason.message : "출처 연결에 실패했습니다.";
   const row = await db().prepare("SELECT payload, updated_at, status, error FROM source_cache WHERE source = ?")
