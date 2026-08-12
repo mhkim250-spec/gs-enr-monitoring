@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { cachedSourceData, getCachedSourceData, saveSourceData } from "../source-cache";
 
 export const dynamic="force-dynamic";
-type Source={key:string;name:string;url:string;articlePattern:RegExp;color:string};
+type Source={key:string;name:string;url:string;articlePattern:RegExp;color:string;logoUrl:string};
 const sources:Source[]=[
-  {key:"todayenergy",name:"투데이에너지",url:"https://www.todayenergy.kr/",articlePattern:/\/news\/articleView\.html\?idxno=\d+/i,color:"#16845b"},
-  {key:"e2news",name:"이투뉴스",url:"https://www.e2news.com/",articlePattern:/\/news\/articleView\.html\?idxno=\d+/i,color:"#0c68a5"},
-  {key:"epj",name:"일렉트릭파워",url:"https://www.epj.co.kr/",articlePattern:/\/news\/articleView\.html\?idxno=\d+/i,color:"#e06931"},
-  {key:"electimes",name:"전기신문",url:"https://www.electimes.com/",articlePattern:/\/(?:news\/)?articleView\.html\?idxno=\d+|\/article\.php\?aid=/i,color:"#6353a3"},
-  {key:"ekn",name:"에너지경제",url:"https://www.ekn.kr/web/",articlePattern:/\/web\/view\.php\?key=\d+/i,color:"#127b84"},
+  {key:"todayenergy",name:"투데이에너지",url:"https://www.todayenergy.kr/",articlePattern:/\/news\/articleView\.html\?idxno=\d+/i,color:"#16845b",logoUrl:"https://www.todayenergy.kr/favicon.ico"},
+  {key:"e2news",name:"이투뉴스",url:"https://www.e2news.com/",articlePattern:/\/news\/articleView\.html\?idxno=\d+/i,color:"#0c68a5",logoUrl:"https://www.e2news.com/favicon.ico"},
+  {key:"epj",name:"일렉트릭파워",url:"https://www.epj.co.kr/",articlePattern:/\/news\/articleView\.html\?idxno=\d+/i,color:"#e06931",logoUrl:"https://www.epj.co.kr/favicon.ico"},
+  {key:"electimes",name:"전기신문",url:"https://www.electimes.com/",articlePattern:/\/(?:news\/)?articleView\.html\?idxno=\d+|\/article\.php\?aid=/i,color:"#6353a3",logoUrl:"https://www.electimes.com/favicon.ico"},
+  {key:"ekn",name:"에너지경제",url:"https://www.ekn.kr/web/",articlePattern:/\/web\/view\.php\?key=\d+/i,color:"#127b84",logoUrl:"https://www.ekn.kr/favicon.ico"},
 ];
 const clean=(value:string)=>value.replace(/<script[\s\S]*?<\/script>/gi,"").replace(/<style[\s\S]*?<\/style>/gi,"").replace(/<[^>]+>/g," ").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/\s+/g," ").trim();
 
@@ -24,7 +24,7 @@ async function readSource(source:Source){
     const image=match[4].match(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/i)?.[1]||"";
     return [{id:`${source.key}-${index}`,source:source.name,sourceKey:source.key,title,url,imageUrl:image?new URL(image,source.url).toString():"",color:source.color}];
   }).slice(0,8);
-  return {key:source.key,name:source.name,url:source.url,color:source.color,articles};
+  return {key:source.key,name:source.name,url:source.url,color:source.color,logoUrl:source.logoUrl,articles};
 }
 
 export async function GET(request:Request){
