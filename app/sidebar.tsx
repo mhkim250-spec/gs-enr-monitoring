@@ -4,6 +4,7 @@ const items=[
   {key:"today",icon:"●",label:"오늘",href:"/"},
   {key:"summary",icon:"▦",label:"주간 일정",href:"/summary"},
   {key:"events",icon:"□",label:"전체 행사",href:"/events"},
+  {key:"mcee",icon:"◉",label:"기후부",href:"/mcee"},
   {key:"news",icon:"N",label:"뉴스",href:"/news"},
 ];
 
