@@ -188,7 +188,7 @@ export default function Home() {
     <main className="site-content">
       <Sidebar />
       <header className="topbar">
-        <div className="topbar-title"><b>대외협력 행사 모니터링</b><span>주요 정책·산업 일정을 한곳에서 확인하세요</span></div>
+        <div className="topbar-title"><b>대외협력 행사 모니터링</b></div>
         <div className="refresh-controls">
           <div className="live"><i /> 매일 09:00 자동 업데이트</div>
           <button className="refresh-button" onClick={() => void refreshEvents(true)} disabled={refreshing}>
@@ -201,16 +201,10 @@ export default function Home() {
 
       <section className="hero" id="top">
         <div className="eyebrow">GS E&R · PUBLIC AFFAIRS</div>
-        <h1>GS E&R<br /><em>대외협력 모니터링</em></h1>
+        <h1>GS E&R<br /><em>대외협력 행사 모니터링</em></h1>
         <div className="hero-bottom">
-          <p>에너지·기후·산업 의제와 연결된 국회 행사와<br />대한상의의 접수중 행사를 한곳에서 확인하세요.</p>
           <a href="#assembly" className="discover">행사 살펴보기 <span>↓</span></a>
         </div>
-      </section>
-
-      <section className="summary-cta" aria-label="행사 요약 대시보드">
-        <div><span>WEEKLY BRIEFING</span><h2>이번 주·다음 주 행사를 한눈에</h2><p>평일 캘린더, 전체 출처 검색, 선택 복사와 보고서 내보내기를 별도 화면에서 이용하세요.</p></div>
-        <a href="/summary">요약 대시보드 열기 <span>→</span></a>
       </section>
 
       <section className="ticker" aria-label="관심 키워드">
