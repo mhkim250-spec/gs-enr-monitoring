@@ -7,6 +7,7 @@ import { classifyText } from "../intelligence";
 type AssemblyEvent = { id:string; title:string; date:string; detailUrl:string; posterUrl:string; host?:string; location?:string };
 type SimpleEvent = { id:string; title:string; date:string; detailUrl:string };
 type ClimateEvent = { id:string; title:string; date:string; detailUrl:string };
+type CommitteeSchedule = { id:string; title:string; date:string; previewUrl:string; downloadUrl:string };
 type UnifiedEvent = { id:string; source:string; date:string; title:string; url:string; posterUrl?:string; host:string; location:string; topics:string[]; score:number; importance:string };
 type SourceStatus = { source:string; updated_at?:number; updatedAt?:number; status:string };
 
@@ -35,6 +36,7 @@ export default function SummaryPage() {
   const [kweia,setKweia]=useState<SimpleEvent[]>([]);
   const [forum,setForum]=useState<ClimateEvent[]>([]);
   const [pcccr,setPcccr]=useState<ClimateEvent[]>([]);
+  const [committeeSchedules,setCommitteeSchedules]=useState<CommitteeSchedule[]>([]);
   const [statuses,setStatuses]=useState<SourceStatus[]>([]);
   const [query,setQuery]=useState("");
   const [selectedIds,setSelectedIds]=useState<string[]>([]);
@@ -47,11 +49,12 @@ export default function SummaryPage() {
     if (refreshSource) setRefreshing(true);
     const stamp=Date.now();
     const getJson=async (path:string) => { const response=await fetch(refreshSource?`${path}?refresh=${stamp}`:path,{cache:"no-store"}); const data=await response.json(); if(!response.ok) throw new Error(data.error||"행사 정보를 불러오지 못했습니다."); return data; };
-    const results=await Promise.allSettled([getJson("/api/events"),getJson("/api/korcham"),getJson("/api/kweia"),getJson("/api/climate-sources")]);
+    const results=await Promise.allSettled([getJson("/api/events"),getJson("/api/korcham"),getJson("/api/kweia"),getJson("/api/climate-sources"),getJson("/api/environment-committee")]);
     if(results[0].status==="fulfilled") setEvents(results[0].value.events||[]);
     if(results[1].status==="fulfilled") setKorcham(results[1].value.events||[]);
     if(results[2].status==="fulfilled") setKweia(results[2].value.events||[]);
     if(results[3].status==="fulfilled") { setForum(results[3].value.climateForum||[]); setPcccr(results[3].value.pcccr||[]); }
+    if(results[4].status==="fulfilled") setCommitteeSchedules((results[4].value.schedules||[]).slice(0,5));
     const persisted=await fetch(`/api/source-status?refresh=${stamp}`,{cache:"no-store"}).then((response)=>response.json()).catch(()=>({statuses:[]}));
     setStatuses(persisted.statuses||[]); setLoading(false); setRefreshing(false);
     const latest=(persisted.statuses||[]).reduce((value:number,status:SourceStatus)=>Math.max(value,status.updated_at||status.updatedAt||0),0); if(latest) setLastUpdated(new Date(latest));
@@ -65,7 +68,8 @@ export default function SummaryPage() {
     ...kweia.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`kweia-${event.id}`,source:"풍력산업협회",date:event.date,title:event.title,url:event.detailUrl,host:"한국풍력산업협회",location:""})),
     ...forum.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`forum-${event.id}`,source:"기후변화포럼",date:event.date,title:event.title,url:event.detailUrl,host:"국회기후변화포럼",location:""})),
     ...pcccr.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`pcccr-${event.id}`,source:"기후위기위원회",date:event.date,title:event.title,url:event.detailUrl,host:"기후위기특별위원회",location:""})),
-  ].map((event)=>({...event,...classifyText(event.title,event.source)})).sort((a,b)=>eventTimestamp(a.date)-eventTimestamp(b.date)),[events,korcham,kweia,forum,pcccr]);
+    ...committeeSchedules.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`envcommittee-${event.id}`,source:"기후환노위",date:event.date,title:event.title,url:event.previewUrl,host:"기후에너지환경노동위원회",location:"국회"})),
+  ].map((event)=>({...event,...classifyText(event.title,event.source)})).sort((a,b)=>eventTimestamp(a.date)-eventTimestamp(b.date)),[events,korcham,kweia,forum,pcccr,committeeSchedules]);
 
   const calendarStart=useMemo(()=>{ const date=new Date(); const day=(date.getDay()+6)%7; date.setDate(date.getDate()-day); date.setHours(0,0,0,0); return date; },[]);
   const calendarDays=useMemo(()=>Array.from({length:10},(_,index)=>{ const date=new Date(calendarStart); date.setDate(date.getDate()+(index<5?index:index+2)); return date; }),[calendarStart]);
@@ -94,7 +98,7 @@ export default function SummaryPage() {
       <div className="calendar-toolbar"><span>{selectedIds.length?`${selectedIds.length}개 선택됨`:`${summaryEvents.length}개 행사`}</span><button onClick={()=>void copyText(reportText,"행사 목록을 복사했습니다.")}>선택 목록 복사</button><button onClick={downloadTable}>표 다운로드</button><button onClick={downloadExcel}>Excel</button><button onClick={()=>window.print()}>PDF</button><button onClick={emailReport}>이메일 보고문</button>{selectedIds.length>0&&<button onClick={()=>setSelectedIds([])}>선택 해제</button>}</div>
       {message&&<p className="action-message" role="status">{message}</p>}
       <div className="two-week-calendar">{[0,1].map((week)=><section className="calendar-week" key={week}><div className="calendar-week-title"><span>{week===0?"THIS WEEK":"NEXT WEEK"}</span><h2>{week===0?"이번 주":"다음 주"}</h2></div><div className="calendar-days">{calendarDays.slice(week*5,week*5+5).map((day)=>{ const dayEvents=summaryEvents.filter((event)=>{ const stamp=eventTimestamp(event.date); return stamp>=day.getTime()&&stamp<day.getTime()+86400000; }); return <div className={`calendar-day ${day.toDateString()===new Date().toDateString()?"today":""}`} key={day.toISOString()}><div className="day-head"><span>{["일","월","화","수","목","금","토"][day.getDay()]}요일</span><strong>{day.getMonth()+1}월 {day.getDate()}일</strong><em>{dayEvents.length}건</em></div><div className="day-events">{dayEvents.map((event)=><label className="calendar-event" key={event.id}><input type="checkbox" checked={selectedIds.includes(event.id)} onChange={(change)=>setSelectedIds((current)=>change.target.checked?[...current,event.id]:current.filter((id)=>id!==event.id))}/><span className="event-source">{event.source}</span><b>{event.title}</b><span className="event-actions"><a href={event.url} target="_blank" rel="noreferrer">원문 ↗</a>{event.source==="국회"&&event.posterUrl&&<a href={event.posterUrl} target="_blank" rel="noreferrer">포스터 ↗</a>}<button type="button" onClick={(click)=>{click.preventDefault();void copyText(`${event.title}\n${event.url}`,"행사 링크를 복사했습니다.");}}>링크 복사</button></span></label>)}</div></div>; })}</div></section>)}</div>
-      <aside className="daily-briefing"><div><span>WEEKLY INSIGHT</span><h2>주간 핵심 일정 요약</h2><p>이번 주와 다음 주 평일 일정은 총 {summaryEvents.length}건이며, GS E&amp;R 핵심·관심 의제 일정은 {summaryEvents.filter(event=>event.score>=65).length}건입니다. 전력·에너지·탄소 정책 영향을 중심으로 참석 필요성을 검토해 주세요.</p></div><button onClick={emailReport}>메일로 작성하기 ↗</button></aside><div className="print-source-note">출처: 국회, 대한상공회의소, 한국풍력산업협회, 국회기후변화포럼, 기후위기특별위원회 · 최종 갱신 {lastUpdated?lastUpdated.toLocaleString("ko-KR"):"확인 중"}</div>
+      <aside className="daily-briefing"><div><span>WEEKLY INSIGHT</span><h2>주간 핵심 일정 요약</h2><p>이번 주와 다음 주 평일 일정은 총 {summaryEvents.length}건이며, GS E&amp;R 핵심·관심 의제 일정은 {summaryEvents.filter(event=>event.score>=65).length}건입니다. 전력·에너지·탄소 정책 영향을 중심으로 참석 필요성을 검토해 주세요.</p></div><button onClick={emailReport}>메일로 작성하기 ↗</button></aside><div className="print-source-note">출처: 국회, 대한상공회의소, 한국풍력산업협회, 국회기후변화포럼, 기후위기특별위원회, 기후에너지환경노동위원회 · 최종 갱신 {lastUpdated?lastUpdated.toLocaleString("ko-KR"):"확인 중"}</div>
     </section>
   </main>;
 }
