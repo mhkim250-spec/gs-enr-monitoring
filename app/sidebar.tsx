@@ -1,6 +1,7 @@
 type SidebarProps={active?:string};
 
 const items=[
+  {key:"news",icon:"N",label:"뉴스",href:"/news"},
   {key:"summary",icon:"▦",label:"요약",href:"/summary"},
   {key:"assembly",icon:"◫",label:"국회",href:"/#assembly"},
   {key:"korcham",icon:"◇",label:"대한상의",href:"/#korcham"},
