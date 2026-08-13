@@ -49,29 +49,24 @@ export async function GET(request: Request) {
   try {
     const base = "https://open.assembly.go.kr/portal/openapi/nfcoioopazrwmjrgs";
     const cleanKey = key.trim();
-    const standard = new URL(base);
-    standard.searchParams.set("KEY", cleanKey);
-    standard.searchParams.set("Type", "json");
-    standard.searchParams.set("pIndex", "1");
-    // The API's first 100 rows can consist entirely of older events. Request a
-    // wider window, then sort and filter locally so current events are not lost.
-    standard.searchParams.set("pSize", "1000");
-    const candidates = [
-      standard.toString(),
-      `${base}?KEY=${encodeURIComponent(cleanKey)}%26Type=json%26pIndex=1%26pSize=1000`,
-    ];
-    let payload: unknown = null;
-    let lastStatus = 502;
-    for (const candidate of candidates) {
-      const response = await fetch(candidate, {
+    // 열린국회정보는 한 번에 큰 pSize를 요청하면 빈 결과를 돌려주는
+    // 경우가 있어, 100건씩 여러 페이지를 안정적으로 수집한다.
+    const pageIndexes = Array.from({ length: 20 }, (_, index) => index + 1);
+    const pages = await Promise.all(pageIndexes.map(async (pageIndex) => {
+      const url = new URL(base);
+      url.searchParams.set("KEY", cleanKey);
+      url.searchParams.set("Type", "json");
+      url.searchParams.set("pIndex", String(pageIndex));
+      url.searchParams.set("pSize", "100");
+      const response = await fetch(url, {
         headers: { Accept: "application/json, text/plain, */*", "User-Agent": "AgendaNow/1.0" },
         cache: "no-store",
       });
-      lastStatus = response.status;
-      if (response.ok) { payload = await response.json(); break; }
-    }
-    if (!payload) throw new Error(`국회 API가 ${lastStatus} 상태를 반환했습니다.`);
-    const rows = extractRows(payload);
+      if (!response.ok) throw new Error(`국회 API ${pageIndex}페이지가 ${response.status} 상태를 반환했습니다.`);
+      return extractRows(await response.json());
+    }));
+    const rows = pages.flat();
+    if (!rows.length) throw new Error("국회 API 응답에서 행사 목록을 찾지 못했습니다.");
     const events = rows.map((row, index) => {
       const title = text(row, "TITLE");
       const description = text(row, "DESCRIPTION");
@@ -82,7 +77,7 @@ export async function GET(request: Request) {
       const normalized = event.title.toLocaleLowerCase("ko");
       return event.title && event.keywords.length > 0 && !EXCLUDED_TITLE_WORDS.some((word) => normalized.includes(word));
     }).sort((a,b) => dateKey(b.date).localeCompare(dateKey(a.date)));
-    return NextResponse.json(await saveSourceData("assembly", { events, total:events.length }), { headers:{ "Cache-Control":"public, s-maxage=1800, stale-while-revalidate=86400" } });
+    return NextResponse.json(await saveSourceData("assembly", { events, total:events.length, rawTotal:rows.length }), { headers:{ "Cache-Control":"public, s-maxage=1800, stale-while-revalidate=86400" } });
   } catch (error) {
     const cached = await cachedSourceData("assembly", error);
     return cached ? NextResponse.json(cached) : NextResponse.json({ error:error instanceof Error ? error.message : "국회 API 연결에 실패했습니다." }, { status:502 });
