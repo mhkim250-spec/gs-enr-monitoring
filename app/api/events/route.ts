@@ -47,10 +47,12 @@ export async function GET(request: Request) {
     standard.searchParams.set("KEY", cleanKey);
     standard.searchParams.set("Type", "json");
     standard.searchParams.set("pIndex", "1");
-    standard.searchParams.set("pSize", "100");
+    // The API's first 100 rows can consist entirely of older events. Request a
+    // wider window, then sort and filter locally so current events are not lost.
+    standard.searchParams.set("pSize", "1000");
     const candidates = [
       standard.toString(),
-      `${base}?KEY=${encodeURIComponent(cleanKey)}%26Type=json%26pIndex=1%26pSize=100`,
+      `${base}?KEY=${encodeURIComponent(cleanKey)}%26Type=json%26pIndex=1%26pSize=1000`,
     ];
     let payload: unknown = null;
     let lastStatus = 502;
@@ -66,7 +68,10 @@ export async function GET(request: Request) {
     const rows = extractRows(payload);
     const events = rows.map((row, index) => {
       const title = text(row, "TITLE");
-      const keywords = KEYWORDS.filter((keyword) => title.toLocaleLowerCase("ko").includes(keyword.toLocaleLowerCase("ko")));
+      const description = text(row, "DESCRIPTION");
+      const host = text(row, "NAME");
+      const searchable = `${title} ${description} ${host}`.toLocaleLowerCase("ko");
+      const keywords = KEYWORDS.filter((keyword) => searchable.includes(keyword.toLocaleLowerCase("ko")));
       return { id:text(row,"ID","EVENT_ID")||`${dateKey(text(row,"SDATE"))}-${index}`, title, date:text(row,"SDATE"), time:text(row,"STIME"), host:text(row,"NAME"), location:text(row,"LOCATION"), posterUrl:text(row,"IMGLINK","IMG_LINK"), detailUrl:text(row,"LINK"), keywords };
     }).filter((event) => {
       const normalized = event.title.toLocaleLowerCase("ko");
