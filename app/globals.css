@@ -158,3 +158,34 @@ body{background:#edf4f3;color:#173746;font-family:"IBM Plex Sans KR",Arial,sans-
 .seoul-weather time{color:#657d84;font-size:11px}
 @media(max-width:1050px){.committee-sections{grid-template-columns:1fr}}
 @media(max-width:700px){.summary-visual{height:175px;border-radius:12px}.seoul-weather{left:12px;min-width:145px;padding:13px 15px;border-radius:12px}.seoul-weather span{font-size:8px}.seoul-weather strong{font-size:28px}.seoul-weather p{font-size:12px}.seoul-weather time{font-size:9px}}
+
+/* Responsive dashboard refinements */
+.summary-visual img{object-fit:cover;object-position:center}
+.legislation-panel li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center}
+.legislation-panel .legislation-copy{display:block}
+.legislation-panel .legislation-copy>div{display:flex;justify-content:space-between;gap:12px}
+.legislation-panel .legislation-copy h3{margin-bottom:0}
+.legislation-panel .legislation-link{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;padding:9px 12px;border:1px solid #18449b;border-radius:8px;background:#fff;color:#18449b;font-size:10px;font-weight:700}
+.legislation-panel .legislation-link span{color:inherit;font-size:12px}
+@media(max-width:700px){
+  .committee-content{padding:24px 14px 56px}
+  .committee-hero{min-height:0;padding:26px 20px}
+  .committee-hero img{width:min(240px,80%);margin-bottom:24px}
+  .committee-hero h1{font-size:clamp(32px,11vw,46px)}
+  .committee-panel{padding:17px 15px}
+  .committee-panel>header{align-items:center}
+  .schedule-list article{grid-template-columns:78px minmax(0,1fr);gap:12px}
+  .legislation-panel li{grid-template-columns:minmax(0,1fr) auto;gap:10px}
+  .legislation-panel .legislation-link{padding:8px 10px}
+  .summary-visual{height:190px}
+  .summary-visual img{object-position:62% center}
+  .seoul-weather{left:10px;min-width:132px;padding:12px 13px}
+  .seoul-weather strong{font-size:27px}
+}
+@media(max-width:480px){
+  .legislation-panel li{grid-template-columns:1fr}
+  .legislation-panel .legislation-link{justify-self:end}
+  .summary-visual{height:178px}
+  .summary-visual img{object-position:67% center}
+  .seoul-weather{max-width:46%}
+}
