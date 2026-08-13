@@ -39,6 +39,31 @@ const dateKey = (value: string) => {
   return digits.length >= 8 ? digits.slice(0, 8) : "00000000";
 };
 
+function apiResponseSummary(payload: unknown) {
+  if (!payload || typeof payload !== "object") return "응답 본문이 비어 있습니다.";
+  const root = payload as Record<string, unknown>;
+  const result = root.RESULT;
+  if (result && typeof result === "object") {
+    const record = result as Record<string, unknown>;
+    return [record.CODE, record.MESSAGE].filter(Boolean).join(" · ") || "RESULT 응답에 코드가 없습니다.";
+  }
+  for (const value of Object.values(root)) {
+    if (!Array.isArray(value)) continue;
+    for (const item of value) {
+      if (!item || typeof item !== "object") continue;
+      const head = (item as Record<string, unknown>).head;
+      if (!Array.isArray(head)) continue;
+      const resultItem = head.find((entry) => entry && typeof entry === "object" && "RESULT" in (entry as Record<string, unknown>));
+      const nested = resultItem && (resultItem as Record<string, unknown>).RESULT;
+      if (nested && typeof nested === "object") {
+        const record = nested as Record<string, unknown>;
+        return [record.CODE, record.MESSAGE].filter(Boolean).join(" · ");
+      }
+    }
+  }
+  return `최상위 항목: ${Object.keys(root).join(", ") || "없음"}`;
+}
+
 export async function GET(request: Request) {
   if (!new URL(request.url).searchParams.has("refresh")) {
     const cached = await getCachedSourceData("assembly");
@@ -63,10 +88,11 @@ export async function GET(request: Request) {
         cache: "no-store",
       });
       if (!response.ok) throw new Error(`국회 API ${pageIndex}페이지가 ${response.status} 상태를 반환했습니다.`);
-      return extractRows(await response.json());
+      const payload = await response.json();
+      return { rows: extractRows(payload), payload };
     }));
-    const rows = pages.flat();
-    if (!rows.length) throw new Error("국회 API 응답에서 행사 목록을 찾지 못했습니다.");
+    const rows = pages.flatMap((page) => page.rows);
+    if (!rows.length) throw new Error(`국회 API 응답에서 행사 목록을 찾지 못했습니다. ${apiResponseSummary(pages[0]?.payload)}`);
     const events = rows.map((row, index) => {
       const title = text(row, "TITLE");
       const description = text(row, "DESCRIPTION");
