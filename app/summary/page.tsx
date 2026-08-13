@@ -87,11 +87,11 @@ export default function SummaryPage() {
   return <main className="summary-page site-content">
     <Sidebar active="summary" />
     <header className="topbar summary-topbar">
-      <div className="topbar-title"><b>요약 대시보드</b><span>이번 주와 다음 주 주요 일정</span></div>
+      <div className="topbar-title"><b>Upcoming Events</b><span>이번 주와 다음 주 주요 일정</span></div>
       <div className="refresh-controls"><button className="refresh-button" onClick={()=>void refresh(true)} disabled={refreshing}><span className={refreshing?"spinning":""}>↻</span> {refreshing?"업데이트 중":"지금 업데이트"}</button>{lastUpdated&&<time>{lastUpdated.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})}</time>}</div>
     </header>
     <section className="summary-dashboard" aria-labelledby="summary-title"><div className="print-report-head"><img src="/gs-enr-logo.png" alt="GS E&R"/><div><h1>대외협력 주간 행사 보고</h1><p>보고일 {new Date().toLocaleDateString("ko-KR")} · 총 {reportEvents.length}건</p></div></div>
-      <div className="summary-heading"><div><p className="section-number">WEEKDAY CALENDAR</p><h1 id="summary-title">이번 주 · 다음 주</h1></div><label className="global-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="전체 출처 검색" aria-label="전체 출처 행사 검색" /></label></div>
+      <div className="summary-heading"><div><p className="section-number">WEEKDAY CALENDAR</p><h1 id="summary-title">Upcoming Events</h1></div><label className="global-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="전체 출처 검색" aria-label="전체 출처 행사 검색" /></label></div>
       <div className="summary-visual" aria-label="에너지 정책과 일정 모니터링 이미지"><img src="/summary-briefing-banner.png" alt="캘린더, 정책 문서와 청정에너지 인프라가 연결된 풍경" /></div>
       <div className="summary-overview" aria-label="행사 요약"><div><span>표시 중인 행사</span><strong>{summaryEvents.length}</strong><small>건</small></div><div><span>선택한 행사</span><strong>{selectedIds.length}</strong><small>건</small></div><div><span>조회 범위</span><b>이번 주 + 다음 주</b><small>월–금</small></div></div>
       {loading&&<div className="summary-loading"><span className="loader" /> 최신 행사를 모으고 있습니다.</div>}
