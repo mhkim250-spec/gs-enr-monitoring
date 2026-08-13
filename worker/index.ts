@@ -5,7 +5,8 @@ import handler from "vinext/server/app-router-entry";
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
-  IMAGES: {
+  PUBLIC_SITE_ORIGIN?: string;
+  IMAGES?: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
         output(options: { format: string; quality: number }): Promise<{ response(): Response }>;
@@ -33,7 +34,7 @@ const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    if (url.pathname === "/_vinext/image") {
+    if (url.pathname === "/_vinext/image" && env.IMAGES) {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
       return handleImageOptimization(request, {
         fetchAsset: (path) => env.ASSETS.fetch(new Request(new URL(path, request.url))),
@@ -47,7 +48,7 @@ const worker = {
     return handler.fetch(request, env, ctx);
   },
   async scheduled(controller: ScheduledController, _env: Env, ctx: ExecutionContext) {
-    const origin="https://agenda-now-assembly.mhkim250.chatgpt.site";
+    const origin=_env.PUBLIC_SITE_ORIGIN?.replace(/\/$/,"")||"https://agenda-now-assembly.mhkim250.chatgpt.site";
     const target=controller.cron==="0 0 * * *"
       ? `${origin}/api/refresh-all`
       : `${origin}/api/news?refresh=${Date.now()}`;
