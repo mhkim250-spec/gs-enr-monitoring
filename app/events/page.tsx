@@ -189,7 +189,7 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="hero" id="top">
+      <section className="hero events-hero" id="top">
         <div className="eyebrow">GS E&R · PUBLIC AFFAIRS</div>
         <h1>GS E&R<br /><em>대외협력 행사 모니터링</em></h1>
         <div className="hero-bottom">
