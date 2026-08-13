@@ -76,23 +76,35 @@ export async function GET(request: Request) {
     const cleanKey = key.trim();
     // 열린국회정보는 한 번에 큰 pSize를 요청하면 빈 결과를 돌려주는
     // 경우가 있어, 100건씩 여러 페이지를 안정적으로 수집한다.
-    const pageIndexes = Array.from({ length: 20 }, (_, index) => index + 1);
-    const pages = await Promise.all(pageIndexes.map(async (pageIndex) => {
+    const pages: Array<{ rows: RawEvent[]; payload: unknown }> = [];
+    const pageErrors: string[] = [];
+    // Avoid overwhelming the upstream service with concurrent requests. A
+    // failed later page must not discard rows already collected successfully.
+    for (let pageIndex = 1; pageIndex <= 10; pageIndex += 1) {
       const url = new URL(base);
       url.searchParams.set("KEY", cleanKey);
       url.searchParams.set("Type", "json");
       url.searchParams.set("pIndex", String(pageIndex));
       url.searchParams.set("pSize", "100");
-      const response = await fetch(url, {
-        headers: { Accept: "application/json, text/plain, */*", "User-Agent": "AgendaNow/1.0" },
-        cache: "no-store",
-      });
-      if (!response.ok) throw new Error(`국회 API ${pageIndex}페이지가 ${response.status} 상태를 반환했습니다.`);
-      const payload = await response.json();
-      return { rows: extractRows(payload), payload };
-    }));
+      try {
+        const response = await fetch(url, {
+          headers: { Accept: "application/json, text/plain, */*", "User-Agent": "AgendaNow/1.0" },
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          pageErrors.push(`${pageIndex}페이지 HTTP ${response.status}`);
+          continue;
+        }
+        const payload = await response.json();
+        const pageRows = extractRows(payload);
+        pages.push({ rows: pageRows, payload });
+        if (pageRows.length === 0 && pageIndex > 1) break;
+      } catch (pageError) {
+        pageErrors.push(`${pageIndex}페이지 ${pageError instanceof Error ? pageError.message : "요청 실패"}`);
+      }
+    }
     const rows = pages.flatMap((page) => page.rows);
-    if (!rows.length) throw new Error(`국회 API 응답에서 행사 목록을 찾지 못했습니다. ${apiResponseSummary(pages[0]?.payload)}`);
+    if (!rows.length) throw new Error(`국회 API 응답에서 행사 목록을 찾지 못했습니다. ${apiResponseSummary(pages[0]?.payload)}${pageErrors.length ? ` · ${pageErrors.join(", ")}` : ""}`);
     const events = rows.map((row, index) => {
       const title = text(row, "TITLE");
       const description = text(row, "DESCRIPTION");
@@ -103,7 +115,7 @@ export async function GET(request: Request) {
       const normalized = event.title.toLocaleLowerCase("ko");
       return event.title && event.keywords.length > 0 && !EXCLUDED_TITLE_WORDS.some((word) => normalized.includes(word));
     }).sort((a,b) => dateKey(b.date).localeCompare(dateKey(a.date)));
-    return NextResponse.json(await saveSourceData("assembly", { events, total:events.length, rawTotal:rows.length }), { headers:{ "Cache-Control":"public, s-maxage=1800, stale-while-revalidate=86400" } });
+    return NextResponse.json(await saveSourceData("assembly", { events, total:events.length, rawTotal:rows.length, pageErrors }), { headers:{ "Cache-Control":"public, s-maxage=1800, stale-while-revalidate=86400" } });
   } catch (error) {
     const cached = await cachedSourceData("assembly", error);
     return cached ? NextResponse.json(cached) : NextResponse.json({ error:error instanceof Error ? error.message : "국회 API 연결에 실패했습니다." }, { status:502 });
