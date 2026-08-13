@@ -16,6 +16,9 @@ const localBindingConfig = {
   main: "./worker/index.ts",
   compatibility_date: "2026-08-13",
   compatibility_flags: ["nodejs_compat"],
+  // Preserve secrets and variables configured directly in the Cloudflare
+  // dashboard when Git-triggered Wrangler deployments publish a new version.
+  keep_vars: true,
   vars: {
     PUBLIC_SITE_ORIGIN: process.env.PUBLIC_SITE_ORIGIN ?? "",
   },
