@@ -19,6 +19,10 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
+interface ScheduledController {
+  cron: string;
+}
+
 // Image security config. SVG sources with .svg extension auto-skip the
 // optimization endpoint on the client side (served directly, no proxy).
 // To route SVGs through the optimizer (with security headers), set
@@ -42,8 +46,12 @@ const worker = {
 
     return handler.fetch(request, env, ctx);
   },
-  async scheduled(_controller: unknown, _env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(fetch("https://agenda-now-assembly.mhkim250.chatgpt.site/api/refresh-all",{method:"POST"}));
+  async scheduled(controller: ScheduledController, _env: Env, ctx: ExecutionContext) {
+    const origin="https://agenda-now-assembly.mhkim250.chatgpt.site";
+    const target=controller.cron==="0 0 * * *"
+      ? `${origin}/api/refresh-all`
+      : `${origin}/api/news?refresh=${Date.now()}`;
+    ctx.waitUntil(fetch(target,{method:controller.cron==="0 0 * * *"?"POST":"GET",headers:{"User-Agent":"GS-ENR-Scheduled-Refresh/1.0"}}));
   },
 };
 
