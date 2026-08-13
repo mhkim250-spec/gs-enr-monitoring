@@ -3,7 +3,7 @@ import { cachedSourceData, getCachedSourceData, saveSourceData } from "../source
 export const dynamic = "force-dynamic";
 
 const KEYWORDS = ["탄소","에너지","NDC","배출권","PPA","분산에너지","수소","특구","원전","석탄","전력","LNG","전기","전기요금","SMP","REC","열병합","송전","배전","계통","ESS","출력제어","열요금","데이터센터","RE100","에너지 고속도로","온실가스","신재생","산업안전","탄소중립","전력망","공시","지속가능","집단에너지","VPP","EMS","에너지 플랫폼","디지털 트윈","CBAM","직접전력거래","송배전 요금","ESG 공시","공급망 실사","CCUS","Scope 3","유연성 자원","전력 계통 보강","AI","메가"];
-const EXCLUDED_TITLE_WORDS = ["교육", "음악"];
+const EXCLUDED_TITLE_WORDS = ["로봇", "음악", "고등"];
 type RawEvent = Record<string, unknown>;
 
 const text = (row: RawEvent, ...keys: string[]) => {
@@ -17,13 +17,19 @@ const text = (row: RawEvent, ...keys: string[]) => {
 function extractRows(payload: unknown): RawEvent[] {
   if (!payload || typeof payload !== "object") return [];
   const root = payload as Record<string, unknown>;
-  const container = root.nfcoioopazrwmjrgs;
-  if (Array.isArray(container)) {
-    for (const segment of container) {
-      if (segment && typeof segment === "object" && Array.isArray((segment as Record<string, unknown>).row)) return (segment as { row: RawEvent[] }).row;
+  // 열린국회정보의 데이터셋 키는 서비스에 따라 달라질 수 있다.
+  // 특정 키 이름을 전제로 하지 않고 최상위 값의 row 배열을 찾는다.
+  for (const value of Object.values(root)) {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item && typeof item === "object" && Array.isArray((item as Record<string, unknown>).row)) {
+          return (item as { row: RawEvent[] }).row;
+        }
+      }
+    } else if (value && typeof value === "object" && Array.isArray((value as Record<string, unknown>).row)) {
+      return (value as { row: RawEvent[] }).row;
     }
   }
-  if (container && typeof container === "object" && Array.isArray((container as Record<string, unknown>).row)) return (container as { row: RawEvent[] }).row;
   if (Array.isArray(root.row)) return root.row as RawEvent[];
   return [];
 }
@@ -69,8 +75,7 @@ export async function GET(request: Request) {
     const events = rows.map((row, index) => {
       const title = text(row, "TITLE");
       const description = text(row, "DESCRIPTION");
-      const host = text(row, "NAME");
-      const searchable = `${title} ${description} ${host}`.toLocaleLowerCase("ko");
+      const searchable = `${title} ${description}`.toLocaleLowerCase("ko");
       const keywords = KEYWORDS.filter((keyword) => searchable.includes(keyword.toLocaleLowerCase("ko")));
       return { id:text(row,"ID","EVENT_ID")||`${dateKey(text(row,"SDATE"))}-${index}`, title, date:text(row,"SDATE"), time:text(row,"STIME"), host:text(row,"NAME"), location:text(row,"LOCATION"), posterUrl:text(row,"IMGLINK","IMG_LINK"), detailUrl:text(row,"LINK"), keywords };
     }).filter((event) => {
