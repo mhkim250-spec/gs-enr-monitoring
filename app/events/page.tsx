@@ -135,7 +135,10 @@ export default function Home() {
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("ko");
-    const currentEvents = events.filter((event) => isWithinLastMonth(event.date));
+    // The Assembly API extraction already applies the requested title and
+    // description keyword rules. Do not discard matched rows a second time
+    // based on SDATE because the source may publish or revise older notices.
+    const currentEvents = events;
     if (!needle) return currentEvents;
     return currentEvents.filter((event) =>
       [event.title, event.host, event.location, ...event.keywords]
@@ -153,7 +156,7 @@ export default function Home() {
   const filteredClimateForumEvents = useMemo(() => climateForumEvents.filter((event) => matchesQuery(event.title, event.date, event.host, event.location)), [climateForumEvents, matchesQuery]);
   const filteredPcccrEvents = useMemo(() => pcccrEvents.filter((event) => matchesQuery(event.title, event.date, event.host, event.location)), [pcccrEvents, matchesQuery]);
   const allCurrentEvents = useMemo<UnifiedEvent[]>(() => [
-    ...events.filter((event) => isWithinLastMonth(event.date)).map((event) => ({ id:`assembly-${event.id}`, source:"국회", date:event.date, title:event.title, url:event.detailUrl || event.posterUrl, section:"#assembly" })),
+    ...events.map((event) => ({ id:`assembly-${event.id}`, source:"국회", date:event.date, title:event.title, url:event.detailUrl || event.posterUrl, section:"#assembly" })),
     ...currentKorchamEvents.map((event) => ({ id:`korcham-${event.id}`, source:"대한상의", date:event.date, title:event.title, url:event.detailUrl, section:"#korcham" })),
     ...currentKweiaEvents.map((event) => ({ id:`kweia-${event.id}`, source:"풍력산업협회", date:event.date, title:event.title, url:event.detailUrl, section:"#kweia" })),
     ...climateForumEvents.filter((event) => isCurrentOrFuture(event.date)).map((event) => ({ id:`forum-${event.id}`, source:"기후변화포럼", date:event.date, title:event.title, url:event.detailUrl, section:"#climateforum" })),
