@@ -10,27 +10,6 @@ type ClimateEvent = { id:string; title:string; date:string; detailUrl:string };
 type CommitteeSchedule = { id:string; title:string; date:string; previewUrl:string; downloadUrl:string };
 type UnifiedEvent = { id:string; source:string; date:string; title:string; url:string; posterUrl?:string; host:string; location:string; topics:string[]; score:number; importance:string };
 type SourceStatus = { source:string; updated_at?:number; updatedAt?:number; status:string };
-type Weather = { temperature:number; weatherCode:number; locationLabel:string };
-
-function weatherLabel(code:number) {
-  if(code===0)return "맑음";
-  if(code<=3)return "구름 조금";
-  if(code<=67)return "비";
-  if(code<=77)return "눈";
-  return "흐림";
-}
-
-function weatherIcon(code:number) {
-  if(code===0)return "☀️";
-  if(code<=3)return "⛅";
-  if(code<=48)return "🌫️";
-  if(code<=67)return "🌧️";
-  if(code<=77)return "🌨️";
-  if(code<=82)return "🌦️";
-  if(code<=86)return "❄️";
-  return "⛈️";
-}
-
 function isCurrentOrFuture(dateText:string) {
   const matches=[...dateText.matchAll(/(?:^|\D)(20\d{2}|\d{2})\s*(?:년|[.\/-])\s*(\d{1,2})\s*(?:월|[.\/-])\s*(\d{1,2})/g)];
   if (!matches.length) return true;
@@ -64,7 +43,6 @@ export default function SummaryPage() {
   const [refreshing,setRefreshing]=useState(false);
   const [message,setMessage]=useState("");
   const [lastUpdated,setLastUpdated]=useState<Date|null>(null);
-  const [weather,setWeather]=useState<Weather|null>(null);
 
   const refresh=useCallback(async (refreshSource=false) => {
     if (refreshSource) setRefreshing(true);
@@ -83,16 +61,6 @@ export default function SummaryPage() {
 
   useEffect(()=>{
     void refresh();
-    const loadWeather=(latitude:number,longitude:number,locationLabel:string)=>fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&timezone=auto`)
-      .then(response=>response.json())
-      .then(data=>setWeather({temperature:data.current.temperature_2m,weatherCode:data.current.weather_code,locationLabel}));
-    const seoulFallback=()=>void loadWeather(37.5665,126.9780,"서울").catch(()=>{});
-    if(!navigator.geolocation){seoulFallback();return;}
-    navigator.geolocation.getCurrentPosition(
-      (position)=>void loadWeather(position.coords.latitude,position.coords.longitude,"현재 위치").catch(seoulFallback),
-      seoulFallback,
-      {enableHighAccuracy:false,timeout:7000,maximumAge:30*60*1000},
-    );
   },[refresh]);
 
   const allEvents=useMemo<UnifiedEvent[]>(()=>[
@@ -125,7 +93,7 @@ export default function SummaryPage() {
     </header>
     <section className="summary-dashboard" aria-labelledby="summary-title"><div className="print-report-head"><img src="/gs-enr-logo.png" alt="GS E&R"/><div><h1>대외협력 주간 행사 보고</h1><p>보고일 {new Date().toLocaleDateString("ko-KR")} · 총 {reportEvents.length}건</p></div></div>
       <div className="summary-heading"><div><p className="section-number">WEEKDAY CALENDAR</p></div><label className="global-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="전체 출처 검색" aria-label="전체 출처 행사 검색" /></label></div>
-      <div className="summary-visual" aria-label="에너지 정책과 일정 모니터링 이미지"><img src="/summary-monitor-banner-v2.png" alt="컴퓨터 화면으로 에너지 정책과 산업 동향을 모니터링하는 풍경" /><div className="summary-visual-title"><span>GS E&amp;R · PUBLIC AFFAIRS</span><h1 id="summary-title">Upcoming Events</h1></div><div className="seoul-weather"><span>{weather?.locationLabel||"현재 위치"} WEATHER</span><div className="weather-reading"><i aria-hidden="true">{weather?weatherIcon(weather.weatherCode):"🌤️"}</i><strong>{weather?`${Math.round(weather.temperature)}℃`:"--℃"}</strong></div><p>{weather?weatherLabel(weather.weatherCode):"날씨 확인 중"}</p><time>{new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric",weekday:"long"})}</time></div></div>
+      <div className="summary-visual" aria-label="에너지 정책과 일정 모니터링 이미지"><img src="/summary-monitor-banner-v2.png" alt="컴퓨터 화면으로 에너지 정책과 산업 동향을 모니터링하는 풍경" /><div className="summary-visual-title"><h1 id="summary-title">Upcoming Events</h1></div></div>
       {loading&&<div className="summary-loading"><span className="loader" /> 최신 행사를 모으고 있습니다.</div>}
       {!loading&&summaryEvents.length===0&&<div className="summary-loading">현재 표시할 평일 행사가 없습니다.</div>}
       <div className="calendar-toolbar"><span>{selectedIds.length?`${selectedIds.length}개 선택됨`:`${summaryEvents.length}개 행사`}</span><button onClick={()=>void copyText(reportText,"행사 목록을 복사했습니다.")}>선택 목록 복사</button><button onClick={downloadTable}>표 다운로드</button><button onClick={downloadExcel}>Excel</button><button onClick={()=>window.print()}>PDF</button><button onClick={emailReport}>이메일 보고문</button>{selectedIds.length>0&&<button onClick={()=>setSelectedIds([])}>선택 해제</button>}</div>

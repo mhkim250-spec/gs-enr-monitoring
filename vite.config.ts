@@ -19,6 +19,7 @@ const localBindingConfig = {
   // Preserve secrets and variables configured directly in the Cloudflare
   // dashboard when Git-triggered Wrangler deployments publish a new version.
   keep_vars: true,
+  ai: { binding: "AI" },
   vars: {
     PUBLIC_SITE_ORIGIN: process.env.PUBLIC_SITE_ORIGIN ?? "",
   },

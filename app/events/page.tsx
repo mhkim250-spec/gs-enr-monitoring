@@ -190,8 +190,7 @@ export default function Home() {
       </header>
 
       <section className="hero events-hero" id="top">
-        <div className="eyebrow">GS E&R · PUBLIC AFFAIRS</div>
-        <h1>GS E&R<br /><em>대외협력 행사 모니터링</em></h1>
+        <h1><em>대외협력 행사 모니터링</em></h1>
         <div className="hero-bottom">
           <a href="#assembly" className="discover">행사 살펴보기 <span>↓</span></a>
         </div>
