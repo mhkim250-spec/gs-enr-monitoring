@@ -144,3 +144,12 @@ body{background:#edf4f3;color:#173746;font-family:"IBM Plex Sans KR",Arial,sans-
 .news-tabs button.active,.news-tabs button:hover{background:#173746;border-color:#173746;color:#fff}
 .today-intro h1,.news-hero h1,.mcee-hero h1,.committee-hero h1{letter-spacing:-.045em}
 @media(max-width:700px){body{font-size:15px;line-height:1.68}.dashboard-panel,.publisher-card,.mcee-board,.committee-panel{border-radius:13px}.brief-event,.publisher-card li a,.mcee-board li a{padding-top:16px;padding-bottom:16px}}
+
+/* Compact committee schedule and summary visual */
+.committee-sections{grid-template-columns:minmax(0,1fr) minmax(360px,1fr);align-items:start}
+.schedule-panel{align-self:start}
+.schedule-panel .schedule-list article{padding-top:15px;padding-bottom:15px}
+.summary-visual{height:190px;margin:0 0 20px;overflow:hidden;border:1px solid #d4e1df;border-radius:16px;background:#f8fbf9}
+.summary-visual img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 57%}
+@media(max-width:1050px){.committee-sections{grid-template-columns:1fr}}
+@media(max-width:700px){.summary-visual{height:140px;border-radius:12px}.summary-visual img{object-position:62% center}}
