@@ -118,3 +118,29 @@ body{font-size:16px;line-height:1.65;letter-spacing:-.012em}
 .mcee-board li strong,.committee-panel h3{font-size:16px;line-height:1.55}
 .mcee-board li span,.committee-panel li span,.schedule-date small{font-size:12px}
 @media(max-width:640px){body{font-size:15px}.source-heading-row{align-items:flex-start;flex-direction:column;gap:12px}.events-section{padding-top:62px;padding-bottom:72px}.events-section .card-body h3,.kcci-card h3{font-size:20px}.news-page .news-rich-item strong{font-size:15px}}
+
+/* B+C hybrid theme — isolated for one-step rollback */
+:root{--ink:#173746;--paper:#edf4f3;--cream:#fbfdfb;--blue:#096b9f;--green:#138b68;--orange:#ee7927;--line:rgba(23,55,70,.17)}
+body{background:#edf4f3;color:#173746;font-family:"IBM Plex Sans KR",Arial,sans-serif;font-size:16px;line-height:1.72;letter-spacing:-.014em}
+.app-sidebar{background:#f8fbf9;border-right-color:#d3e0df}
+.sidebar-nav a{border-radius:10px;color:#385561;font-weight:500}
+.sidebar-nav a:hover,.sidebar-nav a.active{background:#e6f1ed;color:#086e55}
+.topbar{background:rgba(248,251,249,.96);border-bottom-color:#d4e1df}
+.today-page,.news-page,.mcee-page,.committee-page{background:#edf4f3}
+.today-dashboard,.news-portal,.mcee-content,.committee-content{color:#173746}
+.dashboard-panel,.publisher-card,.mcee-board,.committee-panel,.event-card,.kcci-card,.summary-page .calendar-week{background:#fbfdfb;border-color:#d4e1df;box-shadow:0 6px 22px rgba(30,72,81,.045)}
+.dashboard-panel>header,.publisher-card>header,.mcee-board>header,.committee-panel>header{border-color:#cbdcda}
+.brief-event,.publisher-card li a,.mcee-board li a,.schedule-list article,.legislation-panel li{padding-top:18px;padding-bottom:18px;border-bottom-color:#e2ebe9}
+.brief-event b,.publisher-card li span,.mcee-board li strong,.schedule-list h3,.legislation-panel h3{font-weight:500;line-height:1.62}
+.brief-event small,.publisher-card li em,.mcee-board li span,.committee-panel li span{color:#657d84}
+.summary-page .summary-dashboard{background:#edf4f3}
+.summary-page .calendar-week{border-radius:15px}
+.summary-page .calendar-day{background:#f7faf9;border-color:#d8e5e2!important}
+.summary-page .calendar-event{background:#fff;border-left-color:#138b68;box-shadow:none}
+.summary-page .calendar-event>b{font-weight:500;line-height:1.65}
+.source-home-link,.institution-home-link,.refresh-button{border-color:#9dbdb7;color:#087158;background:#fbfdfb}
+.source-home-link:hover,.institution-home-link:hover,.refresh-button:hover{background:#087158;border-color:#087158;color:#fff}
+.news-tabs button{background:#fbfdfb;border-color:#c7d9d6;color:#405c66}
+.news-tabs button.active,.news-tabs button:hover{background:#173746;border-color:#173746;color:#fff}
+.today-intro h1,.news-hero h1,.mcee-hero h1,.committee-hero h1{letter-spacing:-.045em}
+@media(max-width:700px){body{font-size:15px;line-height:1.68}.dashboard-panel,.publisher-card,.mcee-board,.committee-panel{border-radius:13px}.brief-event,.publisher-card li a,.mcee-board li a{padding-top:16px;padding-bottom:16px}}
