@@ -10,6 +10,7 @@ type ClimateEvent = { id:string; title:string; date:string; detailUrl:string };
 type CommitteeSchedule = { id:string; title:string; date:string; previewUrl:string; downloadUrl:string };
 type UnifiedEvent = { id:string; source:string; date:string; title:string; url:string; posterUrl?:string; host:string; location:string; topics:string[]; score:number; importance:string };
 type SourceStatus = { source:string; updated_at?:number; updatedAt?:number; status:string };
+type NewsArticle = {id:string;source:string;title:string;url:string;publishedAt?:string};
 function isCurrentOrFuture(dateText:string) {
   const matches=[...dateText.matchAll(/(?:^|\D)(20\d{2}|\d{2})\s*(?:년|[.\/-])\s*(\d{1,2})\s*(?:월|[.\/-])\s*(\d{1,2})/g)];
   if (!matches.length) return true;
@@ -43,6 +44,7 @@ export default function SummaryPage() {
   const [refreshing,setRefreshing]=useState(false);
   const [message,setMessage]=useState("");
   const [lastUpdated,setLastUpdated]=useState<Date|null>(null);
+  const [liveNews,setLiveNews]=useState<NewsArticle[]>([]);
 
   const refresh=useCallback(async (refreshSource=false) => {
     if (refreshSource) setRefreshing(true);
@@ -62,6 +64,8 @@ export default function SummaryPage() {
   useEffect(()=>{
     void refresh();
   },[refresh]);
+
+  useEffect(()=>{const loadNews=()=>fetch("/api/news",{cache:"no-store"}).then(response=>response.json()).then(data=>setLiveNews((data.groups||[]).flatMap((group:{articles:NewsArticle[]})=>group.articles).slice(0,10))).catch(()=>{});void loadNews();const timer=setInterval(loadNews,180000);return()=>clearInterval(timer);},[]);
 
   const allEvents=useMemo<UnifiedEvent[]>(()=>[
     ...events.filter((event)=>isCurrentOrFuture(event.date)).map((event)=>({id:`assembly-${event.id}`,source:"국회",date:event.date,title:event.title,url:event.detailUrl||event.posterUrl,posterUrl:event.posterUrl,host:event.host||"국회",location:event.location||""})),
@@ -88,12 +92,13 @@ export default function SummaryPage() {
   return <main className="summary-page site-content">
     <Sidebar active="summary" />
     <header className="topbar summary-topbar">
-      <div className="topbar-title"><b>Upcoming Events</b><span>이번 주와 다음 주 주요 일정</span></div>
+      <div className="topbar-title"><b>주요 대관 일정</b><span>이번 주와 다음 주 주요 일정</span></div>
       <div className="refresh-controls"><button className="refresh-button" onClick={()=>void refresh(true)} disabled={refreshing}><span className={refreshing?"spinning":""}>↻</span> {refreshing?"업데이트 중":"지금 업데이트"}</button>{lastUpdated&&<time>{lastUpdated.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})}</time>}</div>
     </header>
     <section className="summary-dashboard" aria-labelledby="summary-title"><div className="print-report-head"><img src="/gs-enr-logo.png" alt="GS E&R"/><div><h1>대외협력 주간 행사 보고</h1><p>보고일 {new Date().toLocaleDateString("ko-KR")} · 총 {reportEvents.length}건</p></div></div>
       <div className="summary-heading"><div><p className="section-number">WEEKDAY CALENDAR</p></div><label className="global-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="전체 출처 검색" aria-label="전체 출처 행사 검색" /></label></div>
-      <div className="summary-visual" aria-label="에너지 정책과 일정 모니터링 이미지"><img src="/summary-monitor-banner-v2.png" alt="컴퓨터 화면으로 에너지 정책과 산업 동향을 모니터링하는 풍경" /><div className="summary-visual-title"><h1 id="summary-title">Upcoming Events</h1></div></div>
+      <div className="summary-visual" aria-label="에너지 정책과 일정 모니터링 이미지"><img src="/summary-monitor-banner-v2.png" alt="컴퓨터 화면으로 에너지 정책과 산업 동향을 모니터링하는 풍경" /><div className="summary-visual-title"><h1 id="summary-title">주요 대관 일정</h1></div></div>
+      <section className="home-news"><header><div><span>LIVE NEWS</span><h2>실시간 주요 뉴스</h2></div><a href="/news">뉴스 전체보기 ↗</a></header><div className="home-news-list">{liveNews.map((article,index)=><a href={article.url} target="_blank" rel="noreferrer" key={article.id}><b>{String(index+1).padStart(2,"0")}</b><span><em>{article.source}</em><strong>{article.title}</strong></span><time>{article.publishedAt||"최신"}</time></a>)}</div></section>
       {loading&&<div className="summary-loading"><span className="loader" /> 최신 행사를 모으고 있습니다.</div>}
       {!loading&&summaryEvents.length===0&&<div className="summary-loading">현재 표시할 평일 행사가 없습니다.</div>}
       <div className="calendar-toolbar"><span>{selectedIds.length?`${selectedIds.length}개 선택됨`:`${summaryEvents.length}개 행사`}</span><button onClick={()=>void copyText(reportText,"행사 목록을 복사했습니다.")}>선택 목록 복사</button><button onClick={downloadTable}>표 다운로드</button><button onClick={downloadExcel}>Excel</button><button onClick={()=>window.print()}>PDF</button><button onClick={emailReport}>이메일 보고문</button>{selectedIds.length>0&&<button onClick={()=>setSelectedIds([])}>선택 해제</button>}</div>
