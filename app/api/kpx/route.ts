@@ -4,7 +4,6 @@ import { cachedSourceData, getCachedSourceData, saveSourceData } from "../source
 export const dynamic = "force-dynamic";
 const SOURCE_URL="https://www.kpx.or.kr/board.es?mid=a11201000000&bid=0042";
 const clean=(value:string)=>value.replace(/<[^>]+>/g," ").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;/gi,"'").replace(/\s+/g," ").trim();
-const withinLastMonth=(value:string)=>{const match=value.match(/(20\d{2})[.\/-](\d{1,2})[.\/-](\d{1,2})/);if(!match)return false;const posted=new Date(Number(match[1]),Number(match[2])-1,Number(match[3]));const cutoff=new Date();cutoff.setMonth(cutoff.getMonth()-1);cutoff.setHours(0,0,0,0);return posted>=cutoff;};
 
 export async function GET(request:Request){
   if(!new URL(request.url).searchParams.has("refresh")){
@@ -18,14 +17,18 @@ export async function GET(request:Request){
     const rows=[...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)];
     const events=rows.flatMap((match,index)=>{
       const row=match[1];
-      const link=row.match(/<a[^>]+href=["']([^"']*act=view[^"']*bid=0042[^"']*)["'][^>]*>([\s\S]*?)<\/a>/i);
+      const link=[...row.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
+        .find((candidate)=>{
+          const href=candidate[1].replace(/&amp;/gi,"&");
+          return href.includes("board.es") && href.includes("act=view") && href.includes("bid=0042") && href.includes("list_no=");
+        });
       if(!link) return [];
       const title=clean(link[2]).replace(/^새글\s*/,"");
       const date=row.match(/20\d{2}[./-]\d{1,2}[./-]\d{1,2}/)?.[0]||"등록일 확인";
       const detailUrl=new URL(link[1].replace(/&amp;/gi,"&"),SOURCE_URL).toString();
       const id=new URL(detailUrl).searchParams.get("list_no")||`kpx-${index}`;
       return title?[{id,title,date,detailUrl}]:[];
-    }).filter((event)=>withinLastMonth(event.date)).slice(0,5);
+    }).slice(0,3);
     if(!events.length) throw new Error("전력거래소 게시물 형식을 확인할 수 없습니다.");
     return NextResponse.json(await saveSourceData("kpx",{events,total:events.length}),{headers:{"Cache-Control":"public, s-maxage=1800, stale-while-revalidate=7200"}});
   }catch(error){
