@@ -3,9 +3,9 @@ import { cachedSourceData, getCachedSourceData, saveSourceData } from "../source
 import { classifyText } from "../../intelligence";
 
 export const dynamic="force-dynamic";
-type Source={key:string;name:string;url:string;articlePattern:RegExp;color:string;logoUrl:string};
+type Source={key:string;name:string;url:string;articlePattern:RegExp;color:string;logoUrl:string;pages?:string[]};
 const sources:Source[]=[
-  {key:"todayenergy",name:"투데이 에너지",url:"https://www.todayenergy.kr/",articlePattern:/\/news\/articleView\.html\?idxno=\d+/i,color:"#16845b",logoUrl:"https://www.todayenergy.kr/favicon.ico"},
+  {key:"todayenergy",name:"투데이 에너지",url:"https://www.todayenergy.kr/",pages:["https://www.todayenergy.kr/","https://www.todayenergy.kr/news/articleList.html?view_type=sm","https://www.todayenergy.kr/news/articleList.html"],articlePattern:/\/news\/articleView\.html\?idxno=\d+/i,color:"#16845b",logoUrl:"https://www.todayenergy.kr/favicon.ico"},
   {key:"e2news",name:"이투뉴스",url:"https://www.e2news.com/",articlePattern:/\/news\/articleView\.html\?idxno=\d+/i,color:"#0c68a5",logoUrl:"https://www.e2news.com/favicon.ico"},
   {key:"epj",name:"일렉트릭파워",url:"https://www.epj.co.kr/",articlePattern:/\/news\/articleView\.html\?idxno=\d+/i,color:"#e06931",logoUrl:"https://www.epj.co.kr/favicon.ico"},
   {key:"electimes",name:"전기신문",url:"https://www.electimes.com/",articlePattern:/\/(?:news\/)?articleView\.html\?idxno=\d+|\/article\.php\?aid=/i,color:"#6353a3",logoUrl:"https://www.electimes.com/favicon.ico"},
@@ -14,18 +14,22 @@ const sources:Source[]=[
 const clean=(value:string)=>value.replace(/<script[\s\S]*?<\/script>/gi,"").replace(/<style[\s\S]*?<\/style>/gi,"").replace(/<[^>]+>/g," ").replace(/&nbsp;|&#160;/gi," ").replace(/&amp;/gi,"&").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/\s+/g," ").trim();
 
 async function readSource(source:Source){
-  const response=await fetch(source.url,{headers:{Accept:"text/html","User-Agent":"GS-ENR-News-Monitor/1.0"},cache:"no-store"});
-  if(!response.ok) throw new Error(`${source.name} ${response.status}`);
-  const html=await response.text(); const seen=new Set<string>();
+  const headers={Accept:"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8","Accept-Language":"ko-KR,ko;q=0.9,en;q=0.7",Referer:source.url,"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36"};
+  const attempts=await Promise.allSettled((source.pages||[source.url]).map(async page=>{const response=await fetch(page,{headers,cache:"no-store"});if(!response.ok)throw new Error(`${response.status}`);return response.text();}));
+  const html=attempts.flatMap(result=>result.status==="fulfilled"?[result.value]:[]).join("\n");
+  if(!html) throw new Error(`${source.name} 페이지 접근 실패`);
+  const seen=new Set<string>();
   const candidates=[...html.matchAll(/<a\b([^>]*?)href=["']([^"']+)["']([^>]*)>([\s\S]*?)<\/a>/gi)].flatMap((match,index)=>{
     const href=match[2].replace(/&amp;/gi,"&"); if(!source.articlePattern.test(href)) return [];
-    const title=clean(match[4]).replace(/^(?:본문보기|새글)\s*/,"");
+    const attributes=`${match[1]} ${match[3]}`;
+    const fallbackTitle=attributes.match(/(?:title|aria-label)=["']([^"']+)["']/i)?.[1]||match[4].match(/<img[^>]+alt=["']([^"']+)["']/i)?.[1]||"";
+    const title=(clean(match[4])||clean(fallbackTitle)).replace(/^(?:본문보기|새글)\s*/,"");
     if(title.length<12||title.length>150) return [];
     const url=new URL(href,source.url).toString(); if(seen.has(url)) return []; seen.add(url);
     const image=match[4].match(/<img[^>]+(?:src|data-src)=["']([^"']+)["']/i)?.[1]||"";
     return [{id:`${source.key}-${index}`,source:source.name,sourceKey:source.key,title,url,imageUrl:image?new URL(image,source.url).toString():"",color:source.color}];
   }).slice(0,8);
-  const articles=await Promise.all(candidates.map(async article=>{try{const detail=await fetch(article.url,{headers:{Accept:"text/html","User-Agent":"GS-ENR-News-Monitor/1.0"},cache:"no-store"}).then(response=>response.ok?response.text():"");const description=clean(detail.match(/<meta[^>]+(?:name|property)=["'](?:description|og:description)["'][^>]+content=["']([^"']+)/i)?.[1]||detail.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["'](?:description|og:description)["']/i)?.[1]||"");const publishedAt=detail.match(/(?:article:published_time|datePublished|등록일|입력)\D{0,40}(20\d{2}[-.\/]\d{1,2}[-.\/]\d{1,2}(?:[T\s]\d{1,2}:\d{2})?)/i)?.[1]||new Date().toISOString().slice(0,10);const intel=classifyText(article.title,description);return {...article,publishedAt,summary:description.slice(0,150),topics:intel.topics.filter(topic=>topic!=="산업"),relevance:intel.score};}catch{const intel=classifyText(article.title);return {...article,publishedAt:new Date().toISOString().slice(0,10),summary:"",topics:intel.topics.filter(topic=>topic!=="산업"),relevance:intel.score};}}));
+  const articles=await Promise.all(candidates.map(async article=>{try{const detail=await fetch(article.url,{headers,cache:"no-store"}).then(response=>response.ok?response.text():"");const description=clean(detail.match(/<meta[^>]+(?:name|property)=["'](?:description|og:description)["'][^>]+content=["']([^"']+)/i)?.[1]||detail.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["'](?:description|og:description)["']/i)?.[1]||"");const publishedAt=detail.match(/(?:article:published_time|datePublished|등록일|입력)\D{0,40}(20\d{2}[-.\/]\d{1,2}[-.\/]\d{1,2}(?:[T\s]\d{1,2}:\d{2})?)/i)?.[1]||new Date().toISOString().slice(0,10);const intel=classifyText(article.title,description);return {...article,publishedAt,summary:description.slice(0,150),topics:intel.topics.filter(topic=>topic!=="산업"),relevance:intel.score};}catch{const intel=classifyText(article.title);return {...article,publishedAt:new Date().toISOString().slice(0,10),summary:"",topics:intel.topics.filter(topic=>topic!=="산업"),relevance:intel.score};}}));
   return {key:source.key,name:source.name,url:source.url,color:source.color,logoUrl:source.logoUrl,articles};
 }
 
