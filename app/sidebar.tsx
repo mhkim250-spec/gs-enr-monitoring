@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import OnboardingGuide from "./onboarding-guide";
 
 type SidebarProps={active?:string};
 type IconName="calendar"|"events"|"ministry"|"committee"|"news";
@@ -31,6 +32,7 @@ export default function Sidebar({active}:SidebarProps){
     <aside className={`app-sidebar ${open?"mobile-open":""}`} aria-label="업무 메뉴">
       <a className="sidebar-brand" href="/"><img src="/gs-enr-logo.png" alt="GS E&R"/><span>행사 모니터링</span></a>
       <nav>{items.map(item=><a className={`${active===item.key?"active":""} nav-${item.key}`} href={item.href} key={item.key}><i><MenuIcon name={item.icon}/></i><span>{item.label}</span></a>)}</nav>
+      <OnboardingGuide/>
       <div className="sidebar-status"><i/>매일 09:00 서버 갱신</div>
     </aside>
   </>;
