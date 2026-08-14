@@ -36,8 +36,10 @@ async function readSource(source:Source){
 export async function GET(request:Request){
   if(!new URL(request.url).searchParams.has("refresh")){const cached=await getCachedSourceData("news");if(cached)return NextResponse.json(cached,{headers:{"Cache-Control":"private, no-store"}});}
   try{
+    const previous=await getCachedSourceData("news");
+    const previousGroups=Array.isArray(previous?.groups)?previous.groups:[];
     const settled=await Promise.allSettled(sources.map(readSource));
-    const groups=settled.map((result,index)=>result.status==="fulfilled"?result.value:{...sources[index],articles:[]});
+    const groups=settled.map((result,index)=>{const source=sources[index];if(result.status==="fulfilled"&&result.value.articles.length)return result.value;const saved=previousGroups.find((group:{key?:string})=>group.key===source.key);return saved||{key:source.key,name:source.name,url:source.url,color:source.color,logoUrl:source.logoUrl,articles:[]};});
     if(!groups.some(group=>group.articles.length>0)) throw new Error("뉴스 매체 연결에 실패했습니다.");
     return NextResponse.json(await saveSourceData("news",{groups,total:groups.reduce((sum,group)=>sum+group.articles.length,0)}));
   }catch(error){const cached=await cachedSourceData("news",error);return cached?NextResponse.json(cached):NextResponse.json({error:error instanceof Error?error.message:"뉴스를 불러오지 못했습니다."},{status:502});}

@@ -20,7 +20,7 @@ export default function LoginPage(){
       <p>에너지·기후·산업 관련 주요 행사와 정책 일정을 확인하세요.</p>
       <form onSubmit={submit}>
         <label htmlFor="password">비밀번호</label>
-        <input id="password" type="password" inputMode="numeric" autoComplete="current-password" value={password} onChange={(event)=>setPassword(event.target.value)} placeholder="비밀번호" required autoFocus/>
+        <input id="password" type="password" autoComplete="current-password" value={password} onChange={(event)=>setPassword(event.target.value)} placeholder="비밀번호" required autoFocus/>
         {error&&<p className="login-error" role="alert">{error}</p>}
         <button type="submit" disabled={submitting}>{submitting?"확인 중…":"로그인"}<span>→</span></button>
       </form>
