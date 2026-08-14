@@ -94,7 +94,7 @@ export default function SummaryPage() {
   return <main className="summary-page site-content">
     <Sidebar active="summary" />
     <header className="topbar summary-topbar">
-      <div className="topbar-title"><b>주요 대관 일정</b><span>이번 주와 다음 주 주요 일정</span></div>
+      <div className="topbar-title"><b>주요 대관 일정</b></div>
       <div className="refresh-controls"><button className="refresh-button" onClick={()=>void refresh(true)} disabled={refreshing}><span className={refreshing?"spinning":""}>↻</span> {refreshing?"업데이트 중":"지금 업데이트"}</button>{lastUpdated&&<time>{lastUpdated.toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})}</time>}</div>
     </header>
     <section className="summary-dashboard" aria-labelledby="summary-title"><div className="print-report-head"><img src="/gs-enr-logo.png" alt="GS E&R"/><div><h1>대외협력 주간 행사 보고</h1><p>보고일 {new Date().toLocaleDateString("ko-KR")} · 총 {reportEvents.length}건</p></div></div>

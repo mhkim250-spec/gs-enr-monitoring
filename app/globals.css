@@ -230,3 +230,11 @@ body{background:#edf4f3;color:#173746;font-family:"IBM Plex Sans KR",Arial,sans-
 .calendar-toolbar-bottom{margin:18px 0 0!important}
 .events-hero-tags{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 10px;max-width:900px;margin:22px auto 0}.events-hero-tags span{padding:7px 11px;border:1px solid rgba(255,255,255,.48);border-radius:999px;background:rgba(255,255,255,.13);color:#fff;font-size:12px;font-weight:700;backdrop-filter:blur(6px)}
 @media(max-width:700px){.events-hero-tags{gap:6px;margin-top:16px}.events-hero-tags span{padding:6px 9px;font-size:10px}}
+
+/* Sidebar icon polish and aligned ministry metadata */
+.sidebar-brand span{font-size:15px;font-weight:750;letter-spacing:-.01em;color:#284d59}
+.app-sidebar nav i{border:0;background:#eaf3f5;color:#08749a}.app-sidebar nav i svg{width:17px;height:17px}
+.app-sidebar nav .nav-summary i{background:#e8f4ef;color:#087b58}.app-sidebar nav .nav-events i{background:#eaf2fb;color:#1768a0}.app-sidebar nav .nav-mcee i{background:#fff1e7;color:#d76b25}.app-sidebar nav .nav-envcommittee i{background:#f0edfb;color:#6650a4}.app-sidebar nav .nav-news i{background:#e8f5f4;color:#087d78}
+.app-sidebar nav a:hover i,.app-sidebar nav a.active i{box-shadow:0 3px 10px rgba(16,63,82,.12);transform:translateY(-1px)}
+.mcee-meta{display:grid!important;grid-template-columns:180px auto!important;justify-content:start;gap:0!important}.mcee-meta em{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:12px!important}.mcee-meta time{min-width:95px}
+@media(max-width:700px){.sidebar-brand span{font-size:16px}.mcee-meta{grid-template-columns:minmax(110px,140px) auto!important}.mcee-meta em{font-size:12px!important}}

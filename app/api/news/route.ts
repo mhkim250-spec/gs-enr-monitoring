@@ -5,7 +5,7 @@ import { classifyText } from "../../intelligence";
 export const dynamic="force-dynamic";
 type Source={key:string;name:string;url:string;articlePattern:RegExp;color:string;logoUrl:string};
 const sources:Source[]=[
-  {key:"todayenergy",name:"투데이에너지",url:"https://www.todayenergy.kr/",articlePattern:/\/news\/articleView\.html\?idxno=\d+/i,color:"#16845b",logoUrl:"https://www.todayenergy.kr/favicon.ico"},
+  {key:"todayenergy",name:"투데이 에너지",url:"https://www.todayenergy.kr/",articlePattern:/\/news\/articleView\.html\?idxno=\d+/i,color:"#16845b",logoUrl:"https://www.todayenergy.kr/favicon.ico"},
   {key:"e2news",name:"이투뉴스",url:"https://www.e2news.com/",articlePattern:/\/news\/articleView\.html\?idxno=\d+/i,color:"#0c68a5",logoUrl:"https://www.e2news.com/favicon.ico"},
   {key:"epj",name:"일렉트릭파워",url:"https://www.epj.co.kr/",articlePattern:/\/news\/articleView\.html\?idxno=\d+/i,color:"#e06931",logoUrl:"https://www.epj.co.kr/favicon.ico"},
   {key:"electimes",name:"전기신문",url:"https://www.electimes.com/",articlePattern:/\/(?:news\/)?articleView\.html\?idxno=\d+|\/article\.php\?aid=/i,color:"#6353a3",logoUrl:"https://www.electimes.com/favicon.ico"},
@@ -33,8 +33,8 @@ export async function GET(request:Request){
   if(!new URL(request.url).searchParams.has("refresh")){const cached=await getCachedSourceData("news");if(cached)return NextResponse.json(cached,{headers:{"Cache-Control":"private, no-store"}});}
   try{
     const settled=await Promise.allSettled(sources.map(readSource));
-    const groups=settled.flatMap((result)=>result.status==="fulfilled"&&result.value.articles.length?[result.value]:[]);
-    if(!groups.length) throw new Error("뉴스 매체 연결에 실패했습니다.");
+    const groups=settled.map((result,index)=>result.status==="fulfilled"?result.value:{...sources[index],articles:[]});
+    if(!groups.some(group=>group.articles.length>0)) throw new Error("뉴스 매체 연결에 실패했습니다.");
     return NextResponse.json(await saveSourceData("news",{groups,total:groups.reduce((sum,group)=>sum+group.articles.length,0)}));
   }catch(error){const cached=await cachedSourceData("news",error);return cached?NextResponse.json(cached):NextResponse.json({error:error instanceof Error?error.message:"뉴스를 불러오지 못했습니다."},{status:502});}
 }
