@@ -178,7 +178,7 @@ export default function Home() {
     <main className="site-content">
       <Sidebar active="events" />
       <header className="topbar">
-        <div className="topbar-title"><b>대외협력 행사 모니터링</b></div>
+        <div className="topbar-title"><b>주요 행사</b></div>
         <div className="refresh-controls">
           <div className="live"><i /> 매일 09:00 자동 업데이트</div>
           <button className="refresh-button" onClick={() => void refreshEvents(true)} disabled={refreshing}>
@@ -190,7 +190,8 @@ export default function Home() {
       </header>
 
       <section className="hero events-hero" id="top">
-        <h1><em>대외협력 행사 모니터링</em></h1>
+        <h1><em>주요 행사</em></h1>
+        <div className="events-hero-tags" aria-label="주요 행사 출처"><span>#국회</span><span>#대한상공회의소</span><span>#풍력협회</span><span>#전력거래소</span><span>#국회기후변화포럼</span><span>#기후위기대응위원회</span></div>
         <div className="hero-bottom">
           <a href="#assembly" className="discover">행사 살펴보기 <span>↓</span></a>
         </div>
