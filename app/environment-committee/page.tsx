@@ -53,7 +53,7 @@ export default function CommitteePage() {
     <main className="committee-page site-content">
       <Sidebar active="envcommittee" />
       <header className="topbar">
-        <div className="topbar-title"><b>기후에너지환경노동위원회</b></div>
+        <div className="topbar-title"><b>기후노동위</b></div>
         <button className="refresh-button" onClick={() => void load(true)} disabled={refreshing}>
           {refreshing ? "업데이트 중" : "지금 업데이트"}
         </button>

@@ -8,7 +8,7 @@ const items:{key:string;icon:IconName;label:string;href:string}[]=[
   {key:"summary",icon:"calendar",label:"주요 대관 일정",href:"/"},
   {key:"events",icon:"events",label:"전체 행사",href:"/events"},
   {key:"mcee",icon:"ministry",label:"기후부",href:"/mcee"},
-  {key:"envcommittee",icon:"committee",label:"기후환노위",href:"/environment-committee"},
+  {key:"envcommittee",icon:"committee",label:"기후노동위",href:"/environment-committee"},
   {key:"news",icon:"news",label:"뉴스",href:"/news"},
 ];
 
