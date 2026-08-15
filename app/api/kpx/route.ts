@@ -28,51 +28,56 @@ type KpxEvent = {
 function parseKpxEvents(html: string): KpxEvent[] {
   const seen = new Set<string>();
   const events: KpxEvent[] = [];
+  const matchedRows = Array.from(
+    html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi),
+    (match) => match[1],
+  );
+  const rows = matchedRows.length ? matchedRows : [html];
 
-  for (const match of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
-    const row = match[1];
+  for (const row of rows) {
+    for (const anchor of row.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
+      const attributes = anchor[1];
+      const href =
+        attributes.match(/\bhref\s*=\s*["']([^"']+)["']/i)?.[1] ?? "";
+      const normalizedHref = href
+        .replace(/&amp;/gi, "&")
+        .replace(/&amp;/gi, "&");
+      const listNo =
+        normalizedHref.match(/[?&]list_no=(\d+)/i)?.[1] ??
+        attributes.match(/goView\s*\(\s*['"]?(\d+)/i)?.[1];
 
-    for (const anchor of row.matchAll(
-      /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,
-    )) {
-      try {
-        const detailUrl = new URL(
-          anchor[1].replace(/&amp;/gi, "&"),
-          SOURCE_URL,
-        );
-        const listNo = detailUrl.searchParams.get("list_no");
+      if (!listNo || seen.has(listNo)) continue;
 
-        if (
-          !detailUrl.pathname.endsWith("/board.es") ||
-          detailUrl.searchParams.get("act") !== "view" ||
-          detailUrl.searchParams.get("bid") !== "0042" ||
-          !listNo ||
-          seen.has(listNo)
-        ) {
-          continue;
-        }
+      const bid = normalizedHref.match(/[?&]bid=([^&]+)/i)?.[1];
+      if (bid && bid !== "0042") continue;
 
-        const title = clean(anchor[2]).replace(/^새글\s*/, "");
-        if (!title) continue;
+      const title = clean(anchor[2]).replace(/^새글\s*/, "");
+      if (!title) continue;
 
-        const date =
-          row.match(/20\d{2}[./-]\d{1,2}[./-]\d{1,2}/)?.[0] ??
-          "등록일 확인";
+      const detailUrl = new URL(
+        normalizedHref ||
+          "/board.es?mid=a11201000000&bid=0042&act=view&list_no=" + listNo,
+        SOURCE_URL,
+      );
+      detailUrl.searchParams.set("mid", "a11201000000");
+      detailUrl.searchParams.set("bid", "0042");
+      detailUrl.searchParams.set("act", "view");
+      detailUrl.searchParams.set("list_no", listNo);
 
-        seen.add(listNo);
-        events.push({
-          id: listNo,
-          title,
-          date,
-          detailUrl: detailUrl.toString(),
-        });
-        break;
-      } catch {
-        // Ignore unrelated or malformed links in the row.
-      }
+      const date =
+        row.match(/20\d{2}[./-]\d{1,2}[./-]\d{1,2}/)?.[0] ??
+        "등록일 확인";
+
+      seen.add(listNo);
+      events.push({
+        id: listNo,
+        title,
+        date,
+        detailUrl: detailUrl.toString(),
+      });
+
+      if (events.length >= MAX_EVENTS) return events;
     }
-
-    if (events.length >= MAX_EVENTS) break;
   }
 
   return events;
@@ -89,21 +94,28 @@ export async function GET(request: Request) {
   }
 
   try {
-    const response = await fetch(SOURCE_URL, {
+    const sourceUrl = new URL(SOURCE_URL);
+    sourceUrl.searchParams.set("nPage", "1");
+    sourceUrl.searchParams.set("_", Date.now().toString());
+
+    const response = await fetch(sourceUrl, {
       headers: {
         Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.7",
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
         Referer: "https://www.kpx.or.kr/",
+        "Upgrade-Insecure-Requests": "1",
         "User-Agent":
-          "Mozilla/5.0 (compatible; GS-ENR-Monitor/1.0; +https://gs-enr-monitoring.mhkim250.workers.dev/)",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
       },
       cache: "no-store",
       redirect: "follow",
     });
 
     if (!response.ok) {
-      throw new Error(`전력거래소가 ${response.status} 상태를 반환했습니다.`);
+      throw new Error("전력거래소가 " + response.status + " 상태를 반환했습니다.");
     }
 
     const html = await response.text();
