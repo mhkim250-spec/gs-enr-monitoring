@@ -4,6 +4,8 @@ import { cachedSourceData, getCachedSourceData, saveSourceData } from "../source
 export const dynamic = "force-dynamic";
 
 const SOURCE_URL = "https://www.kpx.or.kr/board.es?mid=a11201000000&bid=0042";
+const READER_URL =
+  "https://r.jina.ai/http://www.kpx.or.kr/board.es?mid=a11201000000&bid=0042";
 const MAX_EVENTS = 5;
 
 const clean = (value: string) =>
@@ -25,7 +27,18 @@ type KpxEvent = {
   detailUrl: string;
 };
 
-function parseKpxEvents(html: string): KpxEvent[] {
+function addEvent(
+  events: KpxEvent[],
+  seen: Set<string>,
+  event: KpxEvent,
+): boolean {
+  if (!event.id || !event.title || seen.has(event.id)) return false;
+  seen.add(event.id);
+  events.push(event);
+  return events.length >= MAX_EVENTS;
+}
+
+function parseKpxHtml(html: string): KpxEvent[] {
   const seen = new Set<string>();
   const events: KpxEvent[] = [];
   const matchedRows = Array.from(
@@ -68,19 +81,98 @@ function parseKpxEvents(html: string): KpxEvent[] {
         row.match(/20\d{2}[./-]\d{1,2}[./-]\d{1,2}/)?.[0] ??
         "등록일 확인";
 
-      seen.add(listNo);
-      events.push({
-        id: listNo,
-        title,
-        date,
-        detailUrl: detailUrl.toString(),
-      });
-
-      if (events.length >= MAX_EVENTS) return events;
+      if (
+        addEvent(events, seen, {
+          id: listNo,
+          title,
+          date,
+          detailUrl: detailUrl.toString(),
+        })
+      ) {
+        return events;
+      }
     }
   }
 
   return events;
+}
+
+function parseKpxMarkdown(markdown: string): KpxEvent[] {
+  const seen = new Set<string>();
+  const events: KpxEvent[] = [];
+
+  for (const line of markdown.split(/\r?\n/)) {
+    for (const link of line.matchAll(/\[([^\]]+)]\((https?:\/\/[^)]+)\)/gi)) {
+      const title = clean(link[1]).replace(/^새글\s*/, "");
+      const rawUrl = link[2].replace(/\\/g, "").replace(/&amp;/gi, "&");
+      const listNo = rawUrl.match(/[?&]list_no=(\d+)/i)?.[1];
+
+      if (!listNo || !/[?&]bid=0042(?:&|$)/i.test(rawUrl)) continue;
+
+      const date =
+        line.match(/20\d{2}[./-]\d{1,2}[./-]\d{1,2}/)?.[0] ??
+        "등록일 확인";
+      const detailUrl = new URL(rawUrl);
+      detailUrl.searchParams.set("mid", "a11201000000");
+
+      if (
+        addEvent(events, seen, {
+          id: listNo,
+          title,
+          date,
+          detailUrl: detailUrl.toString(),
+        })
+      ) {
+        return events;
+      }
+    }
+  }
+
+  return events;
+}
+
+async function fetchOfficialEvents(): Promise<KpxEvent[]> {
+  const sourceUrl = new URL(SOURCE_URL);
+  sourceUrl.searchParams.set("nPage", "1");
+  sourceUrl.searchParams.set("_", Date.now().toString());
+
+  const response = await fetch(sourceUrl, {
+    headers: {
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+      Referer: "https://www.kpx.or.kr/",
+      "Upgrade-Insecure-Requests": "1",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+    },
+    cache: "no-store",
+    redirect: "follow",
+  });
+
+  if (!response.ok) return [];
+  return parseKpxHtml(await response.text());
+}
+
+async function fetchReaderEvents(): Promise<KpxEvent[]> {
+  const response = await fetch(READER_URL, {
+    headers: {
+      Accept: "text/plain, text/markdown;q=0.9, */*;q=0.8",
+      "Cache-Control": "no-cache",
+      "User-Agent": "GS-ENR-Monitor/1.0",
+      "X-Return-Format": "markdown",
+    },
+    cache: "no-store",
+    redirect: "follow",
+  });
+
+  if (!response.ok) return [];
+
+  const body = await response.text();
+  const htmlEvents = parseKpxHtml(body);
+  return htmlEvents.length ? htmlEvents : parseKpxMarkdown(body);
 }
 
 export async function GET(request: Request) {
@@ -94,35 +186,14 @@ export async function GET(request: Request) {
   }
 
   try {
-    const sourceUrl = new URL(SOURCE_URL);
-    sourceUrl.searchParams.set("nPage", "1");
-    sourceUrl.searchParams.set("_", Date.now().toString());
-
-    const response = await fetch(sourceUrl, {
-      headers: {
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-        Referer: "https://www.kpx.or.kr/",
-        "Upgrade-Insecure-Requests": "1",
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
-      },
-      cache: "no-store",
-      redirect: "follow",
-    });
-
-    if (!response.ok) {
-      throw new Error("전력거래소가 " + response.status + " 상태를 반환했습니다.");
-    }
-
-    const html = await response.text();
-    const events = parseKpxEvents(html);
+    let events = await fetchOfficialEvents();
 
     if (!events.length) {
-      throw new Error("전력거래소 게시물 형식을 확인할 수 없습니다.");
+      events = await fetchReaderEvents();
+    }
+
+    if (!events.length) {
+      throw new Error("전력거래소 게시물을 두 경로 모두에서 확인할 수 없습니다.");
     }
 
     return NextResponse.json(
