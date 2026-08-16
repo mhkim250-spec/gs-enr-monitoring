@@ -76,7 +76,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
-  const [visible, setVisible] = useState(6);
+  const [visible, setVisible] = useState(4);
   const [korchamEvents, setKorchamEvents] = useState<KorchamEvent[]>([]);
   const [korchamLoading, setKorchamLoading] = useState(true);
   const [korchamError, setKorchamError] = useState("");
@@ -152,7 +152,7 @@ export default function Home() {
   const matchesQuery = useCallback((...values:string[]) => !needle || values.join(" ").toLocaleLowerCase("ko").includes(needle), [needle]);
   const currentKorchamEvents = useMemo(() => korchamEvents.filter((event) => isCurrentOrFuture(event.date) && matchesQuery(event.title, event.date)), [korchamEvents, matchesQuery]);
   const currentKweiaEvents = useMemo(() => kweiaEvents.filter((event) => isCurrentOrFuture(event.date) && matchesQuery(event.title, event.date)), [kweiaEvents, matchesQuery]);
-  const currentKpxEvents = useMemo(() => kpxEvents.filter((event) => isWithinLastMonth(event.date) && matchesQuery(event.title, event.date)).slice(0,5), [kpxEvents, matchesQuery]);
+  const currentKpxEvents = useMemo(() => kpxEvents.filter((event) => isWithinLastMonth(event.date) && matchesQuery(event.title, event.date)).slice(0,4), [kpxEvents, matchesQuery]);
   const filteredClimateForumEvents = useMemo(() => climateForumEvents.filter((event) => matchesQuery(event.title, event.date, event.host, event.location)), [climateForumEvents, matchesQuery]);
   const filteredPcccrEvents = useMemo(() => pcccrEvents.filter((event) => matchesQuery(event.title, event.date, event.host, event.location)), [pcccrEvents, matchesQuery]);
   const allCurrentEvents = useMemo<UnifiedEvent[]>(() => [
@@ -208,7 +208,7 @@ export default function Home() {
               <span aria-hidden="true">⌕</span>
               <input
                 value={query}
-                onChange={(e) => { setQuery(e.target.value); setVisible(6); }}
+                onChange={(e) => { setQuery(e.target.value); setVisible(4); }}
                 placeholder="제목, 주최, 키워드 검색"
                 aria-label="행사 검색"
               />
@@ -333,7 +333,6 @@ export default function Home() {
 
       <footer>
         <a className="brand footer-logo" href="#top"><img src="/gs-enr-logo.png" alt="GS E&R" /></a>
-        <p>정책과 비즈니스가 만나는 순간을<br />가장 먼저 발견하세요.</p>
         <div><span>DATA SOURCES</span><a href="https://open.assembly.go.kr" target="_blank" rel="noreferrer">열린국회정보 ↗</a><a href="https://www.korcham.net/nCham/Service/Event/appl/KcciNewsList.asp" target="_blank" rel="noreferrer">대한상공회의소 ↗</a><a href="https://www.kweia.or.kr/bbs/board.php?bo_table=notice&sca=%ED%98%91%ED%9A%8C%ED%96%89%EC%82%AC" target="_blank" rel="noreferrer">한국풍력산업협회 ↗</a><a href="https://www.kpx.or.kr/board.es?mid=a11201000000&bid=0042" target="_blank" rel="noreferrer">전력거래소 ↗</a><a href="https://www.climateforum.or.kr/event" target="_blank" rel="noreferrer">국회기후변화포럼 ↗</a><a href="https://www.pcccr.go.kr/base/board/list?boardManagementNo=56&menuLevel=2&menuNo=150" target="_blank" rel="noreferrer">국가기후위기대응위원회 ↗</a></div>
         <small>© 2026 AGENDA NOW</small>
       </footer>
