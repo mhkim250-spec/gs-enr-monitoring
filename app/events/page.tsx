@@ -243,30 +243,7 @@ export default function Home() {
               <div className="poster-wrap">
                 {event.posterUrl ? (
                   <>
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        position: "absolute",
-                        inset: -20,
-                        backgroundImage: `linear-gradient(rgba(215,210,200,.5), rgba(215,210,200,.5)), url("${event.posterUrl}")`,
-                        backgroundPosition: "center",
-                        backgroundSize: "cover",
-                        filter: "blur(14px)",
-                        transform: "scale(1.08)",
-                      }}
-                    />
-                    <img
-                      src={event.posterUrl}
-                      alt={`${event.title} 포스터`}
-                      loading="lazy"
-                      style={{
-                        position: "relative",
-                        zIndex: 1,
-                        objectFit: "contain",
-                        transform: "none",
-                      }}
-                    />
-                  </>
+                    <img src={event.posterUrl} alt={`${event.title} 포스터`} loading="lazy" />
                 ) : (
                   <div className="poster-fallback"><b>ASSEMBLY</b><span>POLICY<br />EVENT</span></div>
                 )}
