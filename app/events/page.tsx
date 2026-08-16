@@ -363,6 +363,8 @@ export default function Home() {
         .assembly-poster {
           position: relative;
           display: grid;
+          height: auto;
+          aspect-ratio: 3 / 4;
           place-items: center;
           background: #e8eeeb;
           isolation: isolate;
@@ -383,7 +385,7 @@ export default function Home() {
           width: 100%;
           height: 100%;
           object-fit: contain;
-          padding: 12px;
+          padding: 0;
           filter: drop-shadow(0 8px 18px rgba(18, 37, 29, .16));
           transform: none;
           z-index: 1;
