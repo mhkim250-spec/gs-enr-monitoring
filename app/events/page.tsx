@@ -242,12 +242,10 @@ export default function Home() {
             <article className="event-card" key={event.id}>
               <div className="poster-wrap assembly-poster">
                 {event.posterUrl ? (
-                  <img
-                    src={event.posterUrl}
-                    alt={`${event.title} 포스터`}
-                    loading="lazy"
-                    style={{ objectPosition: "center 30%", transform: "scale(1.1)" }}
-                  />
+                  <>
+                    <img className="poster-backdrop" src={event.posterUrl} alt="" aria-hidden="true" />
+                    <img className="poster-image" src={event.posterUrl} alt={`${event.title} 포스터`} loading="lazy" />
+                  </>
                 ) : (
                   <div className="poster-fallback"><b>ASSEMBLY</b><span>POLICY<br />EVENT</span></div>
                 )}
@@ -337,6 +335,37 @@ export default function Home() {
 
 
       <style>{`
+        .assembly-poster {
+          position: relative;
+          display: grid;
+          place-items: center;
+          background: #e8eeeb;
+          isolation: isolate;
+        }
+        .assembly-poster .poster-backdrop {
+          position: absolute;
+          inset: -24px;
+          width: calc(100% + 48px);
+          height: calc(100% + 48px);
+          object-fit: cover;
+          filter: blur(22px) saturate(.75);
+          opacity: .42;
+          transform: scale(1.08);
+          z-index: 0;
+        }
+        .assembly-poster .poster-image {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          padding: 12px;
+          filter: drop-shadow(0 8px 18px rgba(18, 37, 29, .16));
+          transform: none;
+          z-index: 1;
+        }
+        .event-card:hover .assembly-poster .poster-image { transform: none; }
+        .event-card:hover .assembly-poster .poster-backdrop { transform: scale(1.08); }
+
         @media (max-width: 700px) {
           .site-content > .topbar {
             min-height: 64px;
