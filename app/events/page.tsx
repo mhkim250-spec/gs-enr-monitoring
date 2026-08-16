@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Sidebar from "../sidebar";
 
 type AssemblyEvent = {
@@ -31,17 +31,35 @@ function isCurrentOrFuture(dateText: string) {
   return endDate >= today;
 }
 
+
+function MobileSourceContent({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return <>
+    <button
+      type="button"
+      className="mobile-source-toggle"
+      aria-expanded={open}
+      onClick={() => setOpen((value) => !value)}
+    >
+      <span>{open ? "내용 접기" : "내용 펼쳐보기"}</span>
+      <b aria-hidden="true">{open ? "−" : "+"}</b>
+    </button>
+    <div className={`mobile-source-content${open ? " is-open" : ""}`}>{children}</div>
+  </>;
+}
+
 function ClimateSourceSection({ id, number, title, logo, homepageUrl, events, loading, error }: { id:string; number:string; title:string; logo:string; homepageUrl:string; events:ClimateSourceEvent[]; loading:boolean; error:string }) {
   const currentEvents = events.filter((event) => isCurrentOrFuture(event.date));
   return <section className="events-section climate-section" id={id}>
     <div className="section-head"><div><p className="section-number">{number} / SOURCE</p><div className="source-heading-row"><img className="source-heading-logo climate-heading-logo" src={logo} alt={title}/><a className="source-home-link" href={homepageUrl} target="_blank" rel="noreferrer">공식 홈페이지 ↗</a></div></div><div className="section-tools"><p>예정 <strong>{currentEvents.length}</strong>개 행사</p></div></div>
+    <MobileSourceContent>
     {loading && <div className="status-card" role="status"><span className="loader" /><p>최신 행사를 확인하고 있습니다.</p></div>}
     {!loading && error && <div className="status-card error" role="alert"><span>!</span><div><h3>데이터를 불러오지 못했습니다</h3><p>{error}</p></div></div>}
     {!loading && !error && currentEvents.length === 0 && <div className="status-card empty"><span>0</span><p>현재 예정된 행사가 없습니다.</p></div>}
     <div className="event-grid climate-grid">{currentEvents.map((event, index) => <article className="event-card" key={event.id}>
       <div className="poster-wrap">{event.posterUrl ? <img src={event.posterUrl} alt={`${event.title} 포스터`} loading="lazy" /> : <div className="poster-fallback"><b>CLIMATE</b><span>POLICY<br />EVENT</span></div>}</div>
       <div className="card-body"><div className="tags"><span>#기후</span><span>#에너지</span></div><h3>{event.title}</h3><dl><div><dt>일시</dt><dd>{event.date}</dd></div><div><dt>장소</dt><dd>{event.location}</dd></div><div><dt>주최</dt><dd>{event.host}</dd></div></dl><div className="card-links"><a href={event.detailUrl} target="_blank" rel="noreferrer">행사 자세히 보기 <span>↗</span></a>{event.posterUrl && <a className="poster-link" href={event.posterUrl} target="_blank" rel="noreferrer">포스터 원본</a>}</div></div>
-    </article>)}</div>
+    </article>)}</div>    </MobileSourceContent>
   </section>;
 }
 
@@ -217,6 +235,7 @@ export default function Home() {
           </div>
         </div>
 
+        <MobileSourceContent>
         {loading && (
           <div className="status-card" role="status">
             <span className="loader" />
@@ -271,7 +290,7 @@ export default function Home() {
           <button className="more" onClick={() => setVisible((count) => count + 6)}>
             더 많은 행사 보기 <span>＋</span>
           </button>
-        )}
+        )}        </MobileSourceContent>
       </section>
 
       <section className="events-section kcci-section" id="korcham">
@@ -286,6 +305,7 @@ export default function Home() {
           </div>
         </div>
 
+        <MobileSourceContent>
         {korchamLoading && <div className="status-card" role="status"><span className="loader" /><p>접수중인 대한상의 행사를 확인하고 있습니다.</p></div>}
         {!korchamLoading && korchamError && <div className="status-card error" role="alert"><span>!</span><div><h3>대한상의 데이터를 불러오지 못했습니다</h3><p>{korchamError}</p></div></div>}
         {!korchamLoading && !korchamError && currentKorchamEvents.length === 0 && <div className="status-card empty"><span>0</span><p>현재 접수중인 예정 행사가 없습니다.</p></div>}
@@ -299,7 +319,7 @@ export default function Home() {
               <div className="kcci-link">행사 페이지로 이동 <span>↗</span></div>
             </a>
           ))}
-        </div>
+        </div>        </MobileSourceContent>
       </section>
 
       <section className="events-section kweia-section" id="kweia">
@@ -307,6 +327,7 @@ export default function Home() {
           <div><p className="section-number">03 / SOURCE</p><div className="source-heading-row"><img className="source-heading-logo wind-heading-logo" src="/wind-association-heading.png" alt="한국풍력산업협회"/><a className="source-home-link" href="https://www.kweia.or.kr" target="_blank" rel="noreferrer">공식 홈페이지 ↗</a></div></div>
           <div className="section-tools"><span className="open-badge">협회행사</span><p>최근 <strong>{currentKweiaEvents.length}</strong>개의 행사</p></div>
         </div>
+        <MobileSourceContent>
         {kweiaLoading && <div className="status-card" role="status"><span className="loader" /><p>한국풍력산업협회 행사를 확인하고 있습니다.</p></div>}
         {!kweiaLoading && kweiaError && <div className="status-card error" role="alert"><span>!</span><div><h3>한국풍력산업협회 데이터를 불러오지 못했습니다.</h3><p>{kweiaError}</p></div></div>}
         {!kweiaLoading && !kweiaError && currentKweiaEvents.length === 0 && <div className="status-card empty"><span>0</span><p>현재 확인되는 협회행사가 없습니다.</p></div>}
@@ -317,7 +338,7 @@ export default function Home() {
             <div className="kcci-date"><span>게시일·행사일</span><strong>{event.date}</strong></div>
             <div className="kcci-link">한국풍력산업협회에서 보기 <span>↗</span></div>
           </a>)}
-        </div>
+        </div>        </MobileSourceContent>
       </section>
 
       <section className="events-section kpx-section" id="kpx">
@@ -325,9 +346,10 @@ export default function Home() {
           <div><p className="section-number">04 / SOURCE</p><div className="source-heading-row"><div className="source-title-with-logo"><img src="/kpx-logo.svg" alt="KPX 전력거래소" /></div><a className="source-home-link" href="https://www.kpx.or.kr" target="_blank" rel="noreferrer">공식 홈페이지 ↗</a></div></div>
           <div className="section-tools"><span className="open-badge">공지사항</span><p>최근 <strong>{currentKpxEvents.length}</strong>개 게시물</p></div>
         </div>
+        <MobileSourceContent>
         {kpxLoading && <div className="status-card" role="status"><span className="loader" /><p>전력거래소 공지사항을 확인하고 있습니다.</p></div>}
         {!kpxLoading && kpxError && currentKpxEvents.length === 0 && <div className="status-card error" role="alert"><span>!</span><div><h3>전력거래소 데이터를 불러오지 못했습니다.</h3><p>{kpxError}</p></div></div>}
-        <div className="kcci-grid kpx-grid">{currentKpxEvents.map((event,index)=><a className="kcci-card kpx-card" href={event.detailUrl} target="_blank" rel="noreferrer" key={event.id}><div className="kcci-card-top"><span>KPX 공지</span><b>{String(index+1).padStart(2,"0")}</b></div><h3>{event.title}</h3><div className="kcci-date"><span>등록일</span><strong>{event.date}</strong></div><div className="kcci-link">전력거래소에서 보기 <span>↗</span></div></a>)}</div>
+        <div className="kcci-grid kpx-grid">{currentKpxEvents.map((event,index)=><a className="kcci-card kpx-card" href={event.detailUrl} target="_blank" rel="noreferrer" key={event.id}><div className="kcci-card-top"><span>KPX 공지</span><b>{String(index+1).padStart(2,"0")}</b></div><h3>{event.title}</h3><div className="kcci-date"><span>등록일</span><strong>{event.date}</strong></div><div className="kcci-link">전력거래소에서 보기 <span>↗</span></div></a>)}</div>        </MobileSourceContent>
       </section>
 
       <ClimateSourceSection id="climateforum" number="05" title="국회기후변화포럼" logo="/climate-forum-heading.png" homepageUrl="https://www.climateforum.or.kr" events={filteredClimateForumEvents} loading={climateLoading} error={climateError} />
@@ -335,6 +357,9 @@ export default function Home() {
 
 
       <style>{`
+        .mobile-source-toggle { display: none; }
+        .mobile-source-content { display: contents; }
+
         .assembly-poster {
           position: relative;
           display: grid;
@@ -396,9 +421,45 @@ export default function Home() {
             padding: 56px 16px 72px !important;
           }
           .section-head {
-            margin-bottom: 24px !important;
-            padding-bottom: 20px !important;
+            margin-bottom: 0 !important;
+            padding-bottom: 16px !important;
           }
+          .section-head .source-home-link,
+          .section-head .section-tools {
+            display: none !important;
+          }
+          .mobile-source-toggle {
+            width: 100%;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 0;
+            padding: 12px 2px;
+            border: 0;
+            border-bottom: 1px solid rgba(20, 58, 43, .16);
+            background: transparent;
+            color: #173d2f;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+          }
+          .mobile-source-toggle b {
+            display: grid;
+            width: 28px;
+            height: 28px;
+            place-items: center;
+            border-radius: 50%;
+            background: #173d2f;
+            color: white;
+            font-size: 20px;
+            line-height: 1;
+          }
+          .mobile-source-content {
+            display: none;
+            padding-top: 24px;
+          }
+          .mobile-source-content.is-open { display: block; }
           .section-tools {
             margin-top: 20px !important;
             gap: 12px !important;
