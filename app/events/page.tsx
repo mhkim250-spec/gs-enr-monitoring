@@ -39,7 +39,7 @@ function ClimateSourceSection({ id, number, title, logo, homepageUrl, events, lo
     {!loading && error && <div className="status-card error" role="alert"><span>!</span><div><h3>데이터를 불러오지 못했습니다</h3><p>{error}</p></div></div>}
     {!loading && !error && currentEvents.length === 0 && <div className="status-card empty"><span>0</span><p>현재 예정된 행사가 없습니다.</p></div>}
     <div className="event-grid climate-grid">{currentEvents.map((event, index) => <article className="event-card" key={event.id}>
-      <div className="poster-wrap">{event.posterUrl ? <img src={event.posterUrl} alt={`${event.title} 포스터`} loading="lazy" /> : <div className="poster-fallback"><b>CLIMATE</b><span>POLICY<br />EVENT</span></div>}<span className="card-index">{String(index+1).padStart(2,"0")}</span></div>
+      <div className="poster-wrap">{event.posterUrl ? <img src={event.posterUrl} alt={`${event.title} 포스터`} loading="lazy" /> : <div className="poster-fallback"><b>CLIMATE</b><span>POLICY<br />EVENT</span></div>}</div>
       <div className="card-body"><div className="tags"><span>#기후</span><span>#에너지</span></div><h3>{event.title}</h3><dl><div><dt>일시</dt><dd>{event.date}</dd></div><div><dt>장소</dt><dd>{event.location}</dd></div><div><dt>주최</dt><dd>{event.host}</dd></div></dl><div className="card-links"><a href={event.detailUrl} target="_blank" rel="noreferrer">행사 자세히 보기 <span>↗</span></a>{event.posterUrl && <a className="poster-link" href={event.posterUrl} target="_blank" rel="noreferrer">포스터 원본</a>}</div></div>
     </article>)}</div>
   </section>;
@@ -240,13 +240,17 @@ export default function Home() {
         <div className="event-grid">
           {filtered.slice(0, visible).map((event, index) => (
             <article className="event-card" key={event.id}>
-              <div className="poster-wrap">
+              <div className="poster-wrap assembly-poster">
                 {event.posterUrl ? (
-                  <img src={event.posterUrl} alt={`${event.title} 포스터`} loading="lazy" />
+                  <img
+                    src={event.posterUrl}
+                    alt={`${event.title} 포스터`}
+                    loading="lazy"
+                    style={{ objectPosition: "center 30%", transform: "scale(1.1)" }}
+                  />
                 ) : (
                   <div className="poster-fallback"><b>ASSEMBLY</b><span>POLICY<br />EVENT</span></div>
                 )}
-                <span className="card-index">{String(index + 1).padStart(2, "0")}</span>
               </div>
               <div className="card-body">
                 <div className="tags">{event.keywords.slice(0, 3).map((keyword) => <span key={keyword}>#{keyword}</span>)}</div>
@@ -330,6 +334,82 @@ export default function Home() {
 
       <ClimateSourceSection id="climateforum" number="05" title="국회기후변화포럼" logo="/climate-forum-heading.png" homepageUrl="https://www.climateforum.or.kr" events={filteredClimateForumEvents} loading={climateLoading} error={climateError} />
       <ClimateSourceSection id="pcccr" number="06" title="국가기후위기대응위원회" logo="/climate-committee-heading.png" homepageUrl="https://www.pcccr.go.kr" events={filteredPcccrEvents} loading={climateLoading} error={climateError} />
+
+
+      <style>{`
+        @media (max-width: 700px) {
+          .site-content > .topbar {
+            min-height: 64px;
+            height: auto;
+            padding: 12px 86px 12px 16px;
+            align-items: center;
+            gap: 10px;
+          }
+          .topbar-title { font-size: 13px; white-space: nowrap; }
+          .refresh-controls {
+            margin-right: 0 !important;
+            gap: 6px !important;
+            align-items: center !important;
+          }
+          .refresh-controls .live,
+          .refresh-controls time { display: none !important; }
+          .refresh-button {
+            min-height: 38px;
+            padding: 8px 11px !important;
+            white-space: nowrap;
+          }
+          .events-hero {
+            min-height: 360px !important;
+            padding: 48px 18px 36px !important;
+          }
+          .events-hero h1 { font-size: 46px !important; }
+          .events-section {
+            padding: 56px 16px 72px !important;
+          }
+          .section-head {
+            margin-bottom: 24px !important;
+            padding-bottom: 20px !important;
+          }
+          .section-tools {
+            margin-top: 20px !important;
+            gap: 12px !important;
+          }
+          .source-heading-row {
+            flex-wrap: wrap;
+            gap: 12px;
+          }
+          .source-heading-logo {
+            max-width: min(230px, 70vw);
+            height: auto;
+          }
+          .event-grid,
+          .kcci-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .poster-wrap {
+            height: min(118vw, 430px) !important;
+          }
+          .card-body { padding: 18px !important; }
+          .card-body h3 {
+            font-size: 20px !important;
+            word-break: break-word;
+          }
+          .card-links {
+            flex-wrap: wrap;
+            row-gap: 10px;
+          }
+          .kcci-card { padding: 20px !important; }
+          footer {
+            padding: 48px 16px !important;
+            gap: 24px !important;
+          }
+        }
+        @media (max-width: 380px) {
+          .events-hero h1 { font-size: 40px !important; }
+          .events-section { padding-left: 13px !important; padding-right: 13px !important; }
+          .poster-wrap { height: 122vw !important; }
+        }
+      `}</style>
 
       <footer>
         <a className="brand footer-logo" href="#top"><img src="/gs-enr-logo.png" alt="GS E&R" /></a>
