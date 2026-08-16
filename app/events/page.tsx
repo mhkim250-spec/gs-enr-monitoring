@@ -324,7 +324,7 @@ export default function Home() {
           <div className="section-tools"><span className="open-badge">공지사항</span><p>최근 <strong>{currentKpxEvents.length}</strong>개 게시물</p></div>
         </div>
         {kpxLoading && <div className="status-card" role="status"><span className="loader" /><p>전력거래소 공지사항을 확인하고 있습니다.</p></div>}
-        {!kpxLoading && kpxError && <div className="status-card error" role="alert"><span>!</span><div><h3>전력거래소 데이터를 불러오지 못했습니다.</h3><p>{kpxError}</p></div></div>}
+        {!kpxLoading && kpxError && currentKpxEvents.length === 0 && <div className="status-card error" role="alert"><span>!</span><div><h3>전력거래소 데이터를 불러오지 못했습니다.</h3><p>{kpxError}</p></div></div>}
         <div className="kcci-grid kpx-grid">{currentKpxEvents.map((event,index)=><a className="kcci-card kpx-card" href={event.detailUrl} target="_blank" rel="noreferrer" key={event.id}><div className="kcci-card-top"><span>KPX 공지</span><b>{String(index+1).padStart(2,"0")}</b></div><h3>{event.title}</h3><div className="kcci-date"><span>등록일</span><strong>{event.date}</strong></div><div className="kcci-link">전력거래소에서 보기 <span>↗</span></div></a>)}</div>
       </section>
 
