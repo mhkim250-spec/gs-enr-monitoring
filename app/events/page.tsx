@@ -242,8 +242,7 @@ export default function Home() {
             <article className="event-card" key={event.id}>
               <div className="poster-wrap">
                 {event.posterUrl ? (
-                  <>
-                    <img src={event.posterUrl} alt={`${event.title} 포스터`} loading="lazy" />
+                  <img src={event.posterUrl} alt={`${event.title} 포스터`} loading="lazy" />
                 ) : (
                   <div className="poster-fallback"><b>ASSEMBLY</b><span>POLICY<br />EVENT</span></div>
                 )}
