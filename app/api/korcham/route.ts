@@ -4,6 +4,17 @@ import { cachedSourceData, getCachedSourceData, saveSourceData } from "../source
 export const dynamic = "force-dynamic";
 
 const SOURCE_URL = "https://www.korcham.net/nCham/Service/Event/appl/KcciNewsList.asp";
+const EXCLUDED_EVENT_TERMS = [
+  "KBCSD 리더스 포럼",
+  "SUSTAINABLE BUSINESS INNOVATION FORUM",
+];
+
+const withoutExcludedEvents = (data: Record<string, unknown>) => {
+  const events = ((data.events as Array<{ title?: string }>) || []).filter(
+    (event) => !EXCLUDED_EVENT_TERMS.some((term) => event.title?.includes(term)),
+  );
+  return { ...data, events, total: events.length };
+};
 
 const clean = (value: string) => value
   .replace(/<br\s*\/?>/gi, " ~ ")
@@ -20,7 +31,7 @@ const clean = (value: string) => value
 export async function GET(request: Request) {
   if (!new URL(request.url).searchParams.has("refresh")) {
     const cached = await getCachedSourceData("korcham");
-    if (cached) return NextResponse.json(cached, { headers:{ "Cache-Control":"private, no-store" } });
+    if (cached) return NextResponse.json(withoutExcludedEvents(cached), { headers:{ "Cache-Control":"private, no-store" } });
   }
   try {
     const response = await fetch(SOURCE_URL, {
@@ -40,7 +51,7 @@ export async function GET(request: Request) {
       const directUrl = args[4];
       const detailUrl = directUrl || SOURCE_URL;
       const title = clean(linkMatch[2]);
-      if (!title) return [];
+      if (!title || EXCLUDED_EVENT_TERMS.some((term) => title.includes(term))) return [];
       return [{ id: args[1] || `korcham-${index}`, title, date: clean(dateMatch[1]), detailUrl }];
     });
     return NextResponse.json(await saveSourceData("korcham", { events, total: events.length }), {
@@ -48,6 +59,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     const cached = await cachedSourceData("korcham", error);
-    return cached ? NextResponse.json(cached) : NextResponse.json({ error: error instanceof Error ? error.message : "대한상의 행사 연결에 실패했습니다." }, { status: 502 });
+    return cached ? NextResponse.json(withoutExcludedEvents(cached)) : NextResponse.json({ error: error instanceof Error ? error.message : "대한상의 행사 연결에 실패했습니다." }, { status: 502 });
   }
 }
