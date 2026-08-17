@@ -32,7 +32,3 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
-          secrets: |
-            SITE_PASSWORD
-        env:
-          SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
