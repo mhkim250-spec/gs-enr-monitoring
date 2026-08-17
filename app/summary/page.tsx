@@ -64,9 +64,28 @@ export default function SummaryPage() {
 
   useEffect(()=>{
     void refresh();
+    const refreshVisiblePage = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    const timer = window.setInterval(refreshVisiblePage, 60000);
+    window.addEventListener("focus", refreshVisiblePage);
+    document.addEventListener("visibilitychange", refreshVisiblePage);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshVisiblePage);
+      document.removeEventListener("visibilitychange", refreshVisiblePage);
+    };
   },[refresh]);
 
-  useEffect(()=>{const loadNews=()=>fetch("/api/news",{cache:"no-store"}).then(response=>response.json()).then(data=>setLiveNews((data.groups||[]).flatMap((group:{articles:NewsArticle[]})=>group.articles).slice(0,10))).catch(()=>{});void loadNews();const timer=setInterval(loadNews,180000);return()=>clearInterval(timer);},[]);
+  useEffect(()=>{
+    const loadNews=()=>fetch(`/api/news?live=${Date.now()}`,{cache:"no-store"}).then(response=>response.json()).then(data=>setLiveNews((data.groups||[]).flatMap((group:{articles:NewsArticle[]})=>group.articles).slice(0,10))).catch(()=>{});
+    const loadVisibleNews=()=>{if(document.visibilityState==="visible")void loadNews();};
+    void loadNews();
+    const timer=window.setInterval(loadVisibleNews,60000);
+    window.addEventListener("focus",loadVisibleNews);
+    document.addEventListener("visibilitychange",loadVisibleNews);
+    return()=>{window.clearInterval(timer);window.removeEventListener("focus",loadVisibleNews);document.removeEventListener("visibilitychange",loadVisibleNews);};
+  },[]);
   useEffect(()=>{if(liveNews.length<2)return;const timer=setInterval(()=>setLiveNewsIndex(index=>(index+1)%liveNews.length),8000);return()=>clearInterval(timer);},[liveNews.length]);
 
   const allEvents=useMemo<UnifiedEvent[]>(()=>[
