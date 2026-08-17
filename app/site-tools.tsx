@@ -4,11 +4,6 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
-const SAMPLE_QUESTIONS = [
-  "이번 주 주요 행사를 알려줘",
-  "최신 에너지·기후 뉴스를 요약해줘",
-  "기후대응위 주요 일정을 알려줘",
-];
 
 export default function SiteTools() {
   const [open, setOpen] = useState(false);
@@ -132,32 +127,6 @@ export default function SiteTools() {
               ))}
               {loading && <div className="chat-message assistant typing">답변을 생각하고 있어요…</div>}
               <div ref={endRef} />
-            </div>
-            <div
-              className="chatbot-samples"
-              aria-label="샘플 질문"
-              style={{ display: "flex", flexWrap: "wrap", gap: 7, padding: "0 14px 10px" }}
-            >
-              {SAMPLE_QUESTIONS.map((question) => (
-                <button
-                  type="button"
-                  key={question}
-                  disabled={loading}
-                  onClick={() => void ask(question)}
-                  style={{
-                    border: "1px solid rgba(6,108,168,.22)",
-                    borderRadius: 999,
-                    background: "#f2f8fb",
-                    color: "#075d90",
-                    padding: "7px 10px",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    cursor: loading ? "default" : "pointer",
-                  }}
-                >
-                  {question}
-                </button>
-              ))}
             </div>
             <form onSubmit={submit}>
               <textarea
