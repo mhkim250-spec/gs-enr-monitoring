@@ -61,9 +61,10 @@ async function loadLiveContext(request: Request) {
     return response.json() as Promise<Record<string, unknown>>;
   };
 
-  const [assembly, korcham, kweia, climate, committee, news] = await Promise.all([
+  const [assembly, korcham, kpx, kweia, climate, committee, news] = await Promise.all([
     getJson("/api/events"),
     getJson("/api/korcham"),
+    getJson("/api/kpx"),
     getJson("/api/kweia"),
     getJson("/api/climate-sources"),
     getJson("/api/environment-committee"),
@@ -73,6 +74,7 @@ async function loadLiveContext(request: Request) {
   const events = currentTwoWeekEvents([
     { source: "국회", events: (assembly.events as SourceEvent[]) || [] },
     { source: "대한상의", events: (korcham.events as SourceEvent[]) || [] },
+    { source: "전력거래소", events: (kpx.events as SourceEvent[]) || [] },
     { source: "풍력산업협회", events: (kweia.events as SourceEvent[]) || [] },
     { source: "기후변화포럼", events: (climate.climateForum as SourceEvent[]) || [] },
     { source: "기후위기위원회", events: (climate.pcccr as SourceEvent[]) || [] },
@@ -141,7 +143,9 @@ ${newsContext}
 3. 데이터에 없는 행사, 회의, 법안, 날짜를 추측하거나 만들어내지 않습니다.
 4. "현재까지 알려진 주요 정보", "다양한 논의가 진행 중" 같은 모호한 상투 문구를 사용하지 않습니다.
 5. 데이터가 없을 때만 없다고 명확히 말합니다.
-6. 답변은 간결하되 원문 링크를 함께 제공합니다.`;
+6. 답변은 간결하되 원문 링크를 함께 제공합니다.
+7. 모든 질문에서 [첫 화면 이번 주·다음 주 일정]을 먼저 검토하고, 질문과 관련 있는 실제 일정이 있으면 반드시 답변에 활용합니다.
+8. 사용자가 실무에 바로 쓸 수 있도록 핵심 결론을 먼저 말하고, 구체적인 일정·뉴스 근거를 이어서 제시합니다.`;
 
     const result = await ai.run("@cf/meta/llama-3.1-8b-instruct-fast", {
       messages: [{ role: "system", content: system }, ...messages],
@@ -149,8 +153,19 @@ ${newsContext}
       temperature: 0.1,
     });
 
+    const mainAnswer = result.response?.trim() || "질문에 대한 답변을 만들지 못했습니다.";
+    const scheduleReference = live.events.length
+      ? [
+          "",
+          "관련 주요 대관 일정",
+          ...live.events.slice(0, 5).map(
+            (event) => `- [${event.source}] ${event.date} — ${event.title}${event.url ? `\n  원문: ${event.url}` : ""}`,
+          ),
+        ].join("\n")
+      : "";
+
     return NextResponse.json({
-      answer: result.response?.trim() || "답변을 만들지 못했습니다. 질문을 조금 다르게 적어주세요.",
+      answer: `${mainAnswer}${scheduleReference}`,
     });
   } catch {
     return NextResponse.json({ error: "AI 답변 처리 중 오류가 발생했습니다." }, { status: 500 });
