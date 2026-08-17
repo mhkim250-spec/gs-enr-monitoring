@@ -8,6 +8,19 @@ const absolute = (base: string, path: string) => { try { return new URL(path, ba
 
 type ClimateEvent = { id:string; title:string; date:string; location:string; host:string; posterUrl:string; detailUrl:string };
 
+const EXCLUDED_FORUM_TERMS = [
+  "KBCSD 리더스 포럼",
+  "SUSTAINABLE BUSINESS INNOVATION FORUM",
+];
+
+const keepForumEvent = (event: { title?: string }) =>
+  !EXCLUDED_FORUM_TERMS.some((term) => event.title?.includes(term));
+
+const withoutExcludedForumEvent = (data: Record<string, unknown>) => {
+  const climateForum = ((data.climateForum as ClimateEvent[]) || []).filter(keepForumEvent);
+  return { ...data, climateForum };
+};
+
 function parseClimateForum(html: string): ClimateEvent[] {
   const base = "https://www.climateforum.or.kr";
   const map = new Map<string, Partial<ClimateEvent>>();
@@ -21,7 +34,7 @@ function parseClimateForum(html: string): ClimateEvent[] {
     if (title) current.title = title;
     map.set(detailUrl, current);
   }
-  return [...map.values()].filter((item) => item.title).slice(0, 9).map((item) => {
+  return [...map.values()].filter((item) => item.title && keepForumEvent(item)).slice(0, 9).map((item) => {
     const title = item.title || "";
     const md = title.match(/\((\d{1,2})\/(\d{1,2})\)\s*$/);
     const yy = item.posterUrl?.match(/\/data\/editor\/(\d{2})\d{2}\//)?.[1];
@@ -47,7 +60,7 @@ function parsePcccr(html: string): ClimateEvent[] {
 export async function GET(request: Request) {
   if (!new URL(request.url).searchParams.has("refresh")) {
     const cached = await getCachedSourceData("climate");
-    if (cached) return NextResponse.json(cached, { headers:{ "Cache-Control":"private, no-store" } });
+    if (cached) return NextResponse.json(withoutExcludedForumEvent(cached), { headers:{ "Cache-Control":"private, no-store" } });
   }
   try {
     const [forumResponse, pcccrResponse] = await Promise.all([
@@ -59,6 +72,6 @@ export async function GET(request: Request) {
     return NextResponse.json(await saveSourceData("climate", { climateForum:parseClimateForum(forumHtml), pcccr:parsePcccr(pcccrHtml) }), { headers:{ "Cache-Control":"public, s-maxage=1800, stale-while-revalidate=7200" } });
   } catch (error) {
     const cached = await cachedSourceData("climate", error);
-    return cached ? NextResponse.json(cached) : NextResponse.json({ error:error instanceof Error ? error.message : "기후 행사 정보를 불러오지 못했습니다." }, { status:502 });
+    return cached ? NextResponse.json(withoutExcludedForumEvent(cached)) : NextResponse.json({ error:error instanceof Error ? error.message : "기후 행사 정보를 불러오지 못했습니다." }, { status:502 });
   }
 }
