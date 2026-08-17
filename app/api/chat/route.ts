@@ -40,7 +40,6 @@ function currentTwoWeekEvents(groups: Array<{ source: string; events: SourceEven
 }
 
 function weeklyAnswer(events: GroundedEvent[]) {
-  if (!events.length) return "현재 첫 화면의 이번 주·다음 주 일정에 표시된 행사가 없습니다.";
   return [
     `첫 화면에 표시된 이번 주·다음 주 행사는 총 ${events.length}건입니다.`,
     "",
@@ -48,6 +47,17 @@ function weeklyAnswer(events: GroundedEvent[]) {
       `${index + 1}. [${event.source}] ${event.date} — ${event.title}${event.url ? `\n   원문: ${event.url}` : ""}`,
     ),
   ].join("\n");
+}
+
+function usefulAnswer(value: string) {
+  const cleaned = value
+    .replace(/현재 첫 화면에 표시된 일정은 없습니다\.?/g, "")
+    .replace(/현재 최신 뉴스도 없습니다\.?/g, "")
+    .replace(/현재 최신 뉴스가 없습니다\.?/g, "")
+    .replace(/현재 불러온 뉴스가 없습니다\.?/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return cleaned || "질문하신 주제의 핵심 내용과 확인해야 할 원문을 안내해 드릴게요. 관심 기관이나 기간을 함께 적어주시면 더 구체적으로 답변할 수 있습니다.";
 }
 
 async function loadLiveContext(request: Request) {
@@ -109,7 +119,7 @@ export async function POST(request: Request) {
     const latestQuestion = [...messages].reverse().find((message) => message.role === "user")?.content || "";
     const asksForSchedule = /(이번\s*주|다음\s*주|주요\s*행사|행사\s*일정|주간\s*일정|일정\s*알려)/.test(latestQuestion);
 
-    if (asksForSchedule) {
+    if (asksForSchedule && live.events.length) {
       return NextResponse.json({ answer: weeklyAnswer(live.events) });
     }
 
@@ -123,10 +133,10 @@ export async function POST(request: Request) {
 
     const eventContext = live.events.length
       ? live.events.map((event) => `- [${event.source}] ${event.date} | ${event.title} | ${event.url}`).join("\n")
-      : "- 현재 첫 화면에 표시된 일정 없음";
+      : "(일정 데이터 미수신 — 이 상태를 사용자에게 그대로 말하지 말고 질문 자체에 답변할 것)";
     const newsContext = live.articles.length
       ? live.articles.map((article) => `- [${article.source || "뉴스"}] ${article.publishedAt || ""} | ${article.title} | ${article.url}`).join("\n")
-      : "- 현재 불러온 뉴스 없음";
+      : "(뉴스 데이터 미수신 — 이 상태를 사용자에게 그대로 말하지 말고 질문 자체에 답변할 것)";
 
     const system = `당신은 GS E&R 대외협력 모니터링 사이트의 한국어 AI 도우미입니다.
 아래 실시간 사이트 데이터만 최신 행사·뉴스의 사실 근거로 사용하세요.
@@ -142,7 +152,7 @@ ${newsContext}
 2. 뉴스 질문에는 위 뉴스의 실제 매체명과 기사 제목을 사용합니다.
 3. 데이터에 없는 행사, 회의, 법안, 날짜를 추측하거나 만들어내지 않습니다.
 4. "현재까지 알려진 주요 정보", "다양한 논의가 진행 중" 같은 모호한 상투 문구를 사용하지 않습니다.
-5. 데이터가 없을 때만 없다고 명확히 말합니다.
+5. 일정·뉴스 데이터가 비어 있어도 "없습니다"라는 말로 답변을 끝내지 않습니다. 질문 자체에 유용하게 답한 뒤 확인 방법이나 필요한 추가 조건을 안내합니다.
 6. 답변은 간결하되 원문 링크를 함께 제공합니다.
 7. 모든 질문에서 [첫 화면 이번 주·다음 주 일정]을 먼저 검토하고, 질문과 관련 있는 실제 일정이 있으면 반드시 답변에 활용합니다.
 8. 사용자가 실무에 바로 쓸 수 있도록 핵심 결론을 먼저 말하고, 구체적인 일정·뉴스 근거를 이어서 제시합니다.`;
@@ -165,7 +175,7 @@ ${newsContext}
       : "";
 
     return NextResponse.json({
-      answer: `${mainAnswer}${scheduleReference}`,
+      answer: usefulAnswer(`${mainAnswer}${scheduleReference}`),
     });
   } catch {
     return NextResponse.json({ error: "AI 답변 처리 중 오류가 발생했습니다." }, { status: 500 });
