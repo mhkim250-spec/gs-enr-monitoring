@@ -12,8 +12,7 @@ export default function SiteTools() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      content:
-        "안녕하세요! 저는 하얀 스피츠 도우미 ‘에너지’예요. 행사, 뉴스, 에너지·기후 정책 등 무엇이든 물어보세요.",
+      content: "안녕하세요!",
     },
   ]);
   const endRef = useRef<HTMLDivElement>(null);
