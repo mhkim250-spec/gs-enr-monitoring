@@ -33,8 +33,6 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
           secrets: |
-            ASSEMBLY_API_KEY
             SITE_PASSWORD
         env:
-          ASSEMBLY_API_KEY: ${{ secrets.ASSEMBLY_API_KEY }}
           SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
