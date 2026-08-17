@@ -8,7 +8,7 @@ type GroundedEvent = { source: string; date: string; title: string; url: string 
 type NewsArticle = { source?: string; title?: string; url?: string; publishedAt?: string };
 
 function eventTimestamp(value: string) {
-  const match = value.match(/(20\\d{2})\\D+(\\d{1,2})\\D+(\\d{1,2})/);
+  const match = value.match(/(20\d{2})\D+(\d{1,2})\D+(\d{1,2})/);
   return match
     ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime()
     : Number.MAX_SAFE_INTEGER;
@@ -45,9 +45,9 @@ function weeklyAnswer(events: GroundedEvent[]) {
     `첫 화면에 표시된 이번 주·다음 주 행사는 총 ${events.length}건입니다.`,
     "",
     ...events.map((event, index) =>
-      `${index + 1}. [${event.source}] ${event.date} — ${event.title}${event.url ? `\\n   원문: ${event.url}` : ""}`,
+      `${index + 1}. [${event.source}] ${event.date} — ${event.title}${event.url ? `\n   원문: ${event.url}` : ""}`,
     ),
-  ].join("\\n");
+  ].join("\n");
 }
 
 async function loadLiveContext(request: Request) {
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
 
     const live = await loadLiveContext(request);
     const latestQuestion = [...messages].reverse().find((message) => message.role === "user")?.content || "";
-    const asksForSchedule = /(이번\\s*주|다음\\s*주|주요\\s*행사|행사\\s*일정|주간\\s*일정|일정\\s*알려)/.test(latestQuestion);
+    const asksForSchedule = /(이번\s*주|다음\s*주|주요\s*행사|행사\s*일정|주간\s*일정|일정\s*알려)/.test(latestQuestion);
 
     if (asksForSchedule) {
       return NextResponse.json({ answer: weeklyAnswer(live.events) });
@@ -120,10 +120,10 @@ export async function POST(request: Request) {
     }
 
     const eventContext = live.events.length
-      ? live.events.map((event) => `- [${event.source}] ${event.date} | ${event.title} | ${event.url}`).join("\\n")
+      ? live.events.map((event) => `- [${event.source}] ${event.date} | ${event.title} | ${event.url}`).join("\n")
       : "- 현재 첫 화면에 표시된 일정 없음";
     const newsContext = live.articles.length
-      ? live.articles.map((article) => `- [${article.source || "뉴스"}] ${article.publishedAt || ""} | ${article.title} | ${article.url}`).join("\\n")
+      ? live.articles.map((article) => `- [${article.source || "뉴스"}] ${article.publishedAt || ""} | ${article.title} | ${article.url}`).join("\n")
       : "- 현재 불러온 뉴스 없음";
 
     const system = `당신은 GS E&R 대외협력 모니터링 사이트의 한국어 AI 도우미입니다.
