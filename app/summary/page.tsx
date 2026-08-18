@@ -11,6 +11,7 @@ type CommitteeSchedule = { id:string; title:string; date:string; previewUrl:stri
 type UnifiedEvent = { id:string; source:string; date:string; title:string; url:string; posterUrl?:string; host:string; location:string; topics:string[]; score:number; importance:string };
 type SourceStatus = { source:string; updated_at?:number; updatedAt?:number; status:string };
 type NewsArticle = {id:string;source:string;title:string;url:string;publishedAt?:string};
+const DASHBOARD_SYNC_INTERVAL_MS=3*60*60*1000;
 function isCurrentOrFuture(dateText:string) {
   const matches=[...dateText.matchAll(/(?:^|\D)(20\d{2}|\d{2})\s*(?:년|[.\/-])\s*(\d{1,2})\s*(?:월|[.\/-])\s*(\d{1,2})/g)];
   if (!matches.length) return true;
@@ -67,7 +68,7 @@ export default function SummaryPage() {
     const refreshVisiblePage = () => {
       if (document.visibilityState === "visible") void refresh();
     };
-    const timer = window.setInterval(refreshVisiblePage, 60000);
+    const timer = window.setInterval(refreshVisiblePage, DASHBOARD_SYNC_INTERVAL_MS);
     window.addEventListener("focus", refreshVisiblePage);
     document.addEventListener("visibilitychange", refreshVisiblePage);
     return () => {
@@ -81,7 +82,7 @@ export default function SummaryPage() {
     const loadNews=()=>fetch(`/api/news?live=${Date.now()}`,{cache:"no-store"}).then(response=>response.json()).then(data=>setLiveNews((data.groups||[]).flatMap((group:{articles:NewsArticle[]})=>group.articles).slice(0,10))).catch(()=>{});
     const loadVisibleNews=()=>{if(document.visibilityState==="visible")void loadNews();};
     void loadNews();
-    const timer=window.setInterval(loadVisibleNews,60000);
+    const timer=window.setInterval(loadVisibleNews,DASHBOARD_SYNC_INTERVAL_MS);
     window.addEventListener("focus",loadVisibleNews);
     document.addEventListener("visibilitychange",loadVisibleNews);
     return()=>{window.clearInterval(timer);window.removeEventListener("focus",loadVisibleNews);document.removeEventListener("visibilitychange",loadVisibleNews);};
