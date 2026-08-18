@@ -7,7 +7,7 @@ type SidebarProps={active?:string};
 type IconName="calendar"|"events"|"ministry"|"committee"|"news";
 const items:{key:string;icon:IconName;label:string;href:string}[]=[
   {key:"summary",icon:"calendar",label:"주요 대관 일정",href:"/"},
-  {key:"events",icon:"events",label:"전체 행사",href:"/events"},
+  {key:"events",icon:"events",label:"주요 행사",href:"/events"},
   {key:"mcee",icon:"ministry",label:"기후부",href:"/mcee"},
   {key:"envcommittee",icon:"committee",label:"기후노동위",href:"/environment-committee"},
   {key:"news",icon:"news",label:"뉴스",href:"/news"},
@@ -33,7 +33,7 @@ export default function Sidebar({active}:SidebarProps){
       <a className="sidebar-brand" href="/"><img src="/gs-enr-logo.png" alt="GS E&R"/><span>행사 모니터링</span></a>
       <nav>{items.map(item=><a className={`${active===item.key?"active":""} nav-${item.key}`} href={item.href} key={item.key}><i><MenuIcon name={item.icon}/></i><span>{item.label}</span></a>)}</nav>
       <OnboardingGuide/>
-      <div className="sidebar-status"><i/>매일 09:00 서버 갱신</div>
+      <div className="sidebar-status"><i/>3시간마다 서버 갱신</div>
     </aside>
   </>;
 }
