@@ -42,8 +42,8 @@ const localBindingConfig = {
         },
       ]
     : [],
-  // Cloudflare cron uses UTC: 00:00 UTC is 09:00 KST.
-  triggers: { crons: ["0 0 * * *", "0 */3 * * *"] },
+  // Refresh every source every three hours. Cloudflare cron uses UTC.
+  triggers: { crons: ["0 */3 * * *"] },
 };
 
 export default defineConfig(async () => {

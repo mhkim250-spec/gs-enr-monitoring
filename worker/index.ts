@@ -20,10 +20,6 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
-interface ScheduledController {
-  cron: string;
-}
-
 // Image security config. SVG sources with .svg extension auto-skip the
 // optimization endpoint on the client side (served directly, no proxy).
 // To route SVGs through the optimizer (with security headers), set
@@ -47,12 +43,20 @@ const worker = {
 
     return handler.fetch(request, env, ctx);
   },
-  async scheduled(controller: ScheduledController, _env: Env, ctx: ExecutionContext) {
-    const origin=_env.PUBLIC_SITE_ORIGIN?.replace(/\/$/,"")||"https://agenda-now-assembly.mhkim250.chatgpt.site";
-    const target=controller.cron==="0 0 * * *"
-      ? `${origin}/api/refresh-all`
-      : `${origin}/api/news?refresh=${Date.now()}`;
-    ctx.waitUntil(fetch(target,{method:controller.cron==="0 0 * * *"?"POST":"GET",headers:{"User-Agent":"GS-ENR-Scheduled-Refresh/1.0"}}));
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    const stamp=Date.now();
+    const paths=["/api/events","/api/korcham","/api/kweia","/api/climate-sources","/api/kpx","/api/mcee","/api/environment-committee","/api/news"];
+    const refreshAll=async()=>{
+      const results=await Promise.allSettled(paths.map(async(path)=>{
+        const response=await handler.fetch(new Request(`https://scheduled.internal${path}?refresh=${stamp}`,{
+          headers:{"User-Agent":"GS-ENR-Scheduled-Refresh/1.0"},
+        }),env,ctx);
+        if(!response.ok) throw new Error(`${path} ${response.status}`);
+        await response.arrayBuffer();
+      }));
+      console.log(JSON.stringify({event:"scheduled-refresh",finishedAt:Date.now(),sources:results.map((result,index)=>({path:paths[index],status:result.status}))}));
+    };
+    ctx.waitUntil(refreshAll());
   },
 };
 

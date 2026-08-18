@@ -199,7 +199,7 @@ export default function Home() {
       <header className="topbar">
         <div className="topbar-title"><b>주요 행사</b></div>
         <div className="refresh-controls">
-          <div className="live"><i /> 매일 09:00 자동 업데이트</div>
+          <div className="live"><i /> 3시간마다 자동 업데이트</div>
           <button className="refresh-button" onClick={() => void refreshEvents(true)} disabled={refreshing}>
             <span aria-hidden="true" className={refreshing ? "spinning" : ""}>↻</span>
             {refreshing ? "업데이트 중" : "지금 업데이트"}
