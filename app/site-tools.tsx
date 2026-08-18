@@ -1,11 +1,13 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
 
 export default function SiteTools() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -62,6 +64,8 @@ export default function SiteTools() {
     event.preventDefault();
     void ask(input);
   };
+
+  if (pathname === "/login") return null;
 
   return (
     <>
